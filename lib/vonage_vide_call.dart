@@ -102,12 +102,20 @@ class VonageVideoCall
   }
 
   @override
-  Future<List<String>> listAvailableOutputDevices() {
-    throw UnimplementedError();
+  Future<List<AudioOutputDeviceCallback?>> listAvailableOutputDevices() async {
+    try {
+      return await _vonageHostApi.listAvailableOutputDevices();
+    } catch (_) {
+      rethrow;
+    }
   }
 
   @override
-  Future<void> setOutputDevice(AudioOutputDevice device) {
-    throw UnimplementedError();
+  Future<void> setOutputDevice(String deviceName) async {
+    try {
+      return await _vonageHostApi.setOutputDevice(deviceName);
+    } catch (_) {
+      rethrow;
+    }
   }
 }

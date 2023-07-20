@@ -57,9 +57,9 @@ enum class ConnectionState(val raw: Int) {
 
 enum class AudioOutputDevice(val raw: Int) {
   SPEAKER(0),
-  RECEIVER(1),
-  HEADPHONE(2),
-  BLUETOOTH(3);
+  HEADPHONE(1),
+  BLUETOOTH(2),
+  RECEIVER(3);
 
   companion object {
     fun ofRaw(raw: Int): AudioOutputDevice? {
@@ -92,19 +92,22 @@ data class SubscriberConnectionCallback (
 
 /** Generated class from Pigeon that represents data sent in messages. */
 data class AudioOutputDeviceCallback (
-  val device: AudioOutputDevice
+  val type: AudioOutputDevice,
+  val name: String
 
 ) {
   companion object {
     @Suppress("UNCHECKED_CAST")
     fun fromList(list: List<Any?>): AudioOutputDeviceCallback {
-      val device = AudioOutputDevice.ofRaw(list[0] as Int)!!
-      return AudioOutputDeviceCallback(device)
+      val type = AudioOutputDevice.ofRaw(list[0] as Int)!!
+      val name = list[1] as String
+      return AudioOutputDeviceCallback(type, name)
     }
   }
   fun toList(): List<Any?> {
     return listOf<Any?>(
-      device.raw,
+      type.raw,
+      name,
     )
   }
 }
@@ -164,6 +167,11 @@ private object VonageVideoCallHostApiCodec : StandardMessageCodec() {
     return when (type) {
       128.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
+          AudioOutputDeviceCallback.fromList(it)
+        }
+      }
+      129.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
           SessionConfig.fromList(it)
         }
       }
@@ -172,8 +180,12 @@ private object VonageVideoCallHostApiCodec : StandardMessageCodec() {
   }
   override fun writeValue(stream: ByteArrayOutputStream, value: Any?)   {
     when (value) {
-      is SessionConfig -> {
+      is AudioOutputDeviceCallback -> {
         stream.write(128)
+        writeValue(stream, value.toList())
+      }
+      is SessionConfig -> {
+        stream.write(129)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -188,8 +200,8 @@ interface VonageVideoCallHostApi {
   fun switchCamera()
   fun toggleAudio(enabled: Boolean)
   fun toggleVideo(enabled: Boolean)
-  fun listAvailableOutputDevices(): List<String>
-  fun setOutputDevice(device: AudioOutputDevice)
+  fun listAvailableOutputDevices(): List<AudioOutputDeviceCallback>
+  fun setOutputDevice(deviceName: String)
 
   companion object {
     /** The codec used by VonageVideoCallHostApi. */
@@ -311,10 +323,10 @@ interface VonageVideoCallHostApi {
         if (api != null) {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
-            val deviceArg = AudioOutputDevice.ofRaw(args[0] as Int)!!
+            val deviceNameArg = args[0] as String
             var wrapped: List<Any?>
             try {
-              api.setOutputDevice(deviceArg)
+              api.setOutputDevice(deviceNameArg)
               wrapped = listOf<Any?>(null)
             } catch (exception: Throwable) {
               wrapped = wrapError(exception)

@@ -1,18 +1,24 @@
 package com.cacianokroth.vonage_video_call
 
 import AudioOutputDevice
+import AudioOutputDeviceCallback
 import ConnectionCallback
 import ConnectionState
 import SessionConfig
 import SubscriberConnectionCallback
 import VonageVideoCallHostApi
 import VonageVideoCallPlatformApi
+import android.annotation.SuppressLint
 import android.content.Context
-import android.hardware.camera2.CameraCaptureSession
+import android.graphics.drawable.GradientDrawable
 import android.opengl.GLSurfaceView
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import com.opentok.android.AudioDeviceManager
 import com.opentok.android.BaseVideoRenderer
 import com.opentok.android.OpentokError
 import com.opentok.android.Publisher
@@ -21,7 +27,6 @@ import com.opentok.android.Session
 import com.opentok.android.Stream
 import com.opentok.android.Subscriber
 import com.opentok.android.SubscriberKit
-import com.vonage.webrtc.Camera2Capturer
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 
 class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
@@ -30,6 +35,7 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
   
   private var context: Context? = null
   private var session: Session? = null
+  private var audioDevice: CustomAudioDevice? = null
   
   private var publisher: Publisher? = null
   
@@ -38,6 +44,9 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
   
   private var audioInitiallyEnabled = true
   private var videoInitiallyEnabled = true
+  
+  private var lastTouchX = 0f
+  private var lastTouchY = 0f
   
   companion object {
     private val TAG = VonageVideoCallPlugin::class.java.simpleName
@@ -49,7 +58,6 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
     )
     
     val binaryMessenger = flutterPluginBinding.binaryMessenger
-    
     context = flutterPluginBinding.applicationContext
     videoPlatformView = VonageVideoCallVideoFactory.getViewInstance(context)
     VonageVideoCallHostApi.setUp(binaryMessenger, this)
@@ -67,6 +75,25 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
     
     audioInitiallyEnabled = config.audioInitiallyEnabled
     videoInitiallyEnabled = config.videoInitiallyEnabled
+    
+    if (audioDevice == null) {
+      audioDevice = CustomAudioDevice(
+        context,
+      ) { device ->
+        Log.d(TAG, "Audio output changed to ${device.type}")
+        
+        runOnUiThread {
+          platformApi.onAudioOutputDeviceChange(
+            AudioOutputDeviceCallback(
+              type = getAudioOutputDevice(device.type),
+              name = device.name,
+            )
+          ) {}
+        }
+      }
+    }
+    
+    if (session == null) AudioDeviceManager.setAudioDevice(audioDevice)
     
     session = Session.Builder(context, config.apiKey, config.id).build()
     session!!.setSessionListener(sessionListener)
@@ -97,15 +124,30 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
     }
   }
   
-  override fun listAvailableOutputDevices(): List<String> {
-    TODO("Not yet implemented")
+  override fun listAvailableOutputDevices(): List<AudioOutputDeviceCallback> {
+    return audioDevice!!.availableOutputs.map {
+      AudioOutputDeviceCallback(
+        getAudioOutputDevice(it.type),
+        it.name,
+      )
+    }
   }
   
-  override fun setOutputDevice(device: AudioOutputDevice) {
-    TODO("Not yet implemented")
+  override fun setOutputDevice(deviceName: String) {
+    audioDevice!!.changeOutputType(audioDevice!!.availableOutputs.first { it.name == deviceName }.type)
+  }
+  
+  private fun getAudioOutputDevice(type: OutputDevice): AudioOutputDevice {
+    return when (type) {
+      OutputDevice.SPEAKER_PHONE -> AudioOutputDevice.SPEAKER
+      OutputDevice.BLUETOOTH -> AudioOutputDevice.BLUETOOTH
+      OutputDevice.RECEIVER -> AudioOutputDevice.RECEIVER
+      OutputDevice.HEAD_PHONES -> AudioOutputDevice.HEADPHONE
+    }
   }
   
   private val sessionListener: Session.SessionListener = object : Session.SessionListener {
+    @SuppressLint("ClickableViewAccessibility")
     override fun onConnected(session: Session?) {
       publisher = Publisher.Builder(context).build().apply {
         setPublisherListener(object : PublisherKit.PublisherListener {
@@ -127,6 +169,7 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
         })
         
         renderer.setStyle(BaseVideoRenderer.STYLE_VIDEO_SCALE, BaseVideoRenderer.STYLE_VIDEO_FILL)
+        
         view.layoutParams = ViewGroup.LayoutParams(
           ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
         )
@@ -135,6 +178,10 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
         publishVideo = videoInitiallyEnabled
         
         videoPlatformView.publisherContainer.addView(view)
+        videoPlatformView.publisherContainer.setOnTouchListener { view, event ->
+          handleTouch(view, event)
+          true
+        }
         
         if (view is GLSurfaceView) {
           (view as GLSurfaceView).setZOrderOnTop(true)
@@ -143,7 +190,48 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
       
       session!!.publish(publisher)
       notifyConnectionChanges(ConnectionState.WAITING)
-      platformApi.onSessionConnected(session.connection.connectionId) {}
+      
+      runOnUiThread {
+        platformApi.onSessionConnected(session.connection.connectionId) {}
+      }
+    }
+    
+    private fun handleTouch(view: View, event: MotionEvent) {
+      val x = event.rawX
+      val y = event.rawY
+      
+      when (event.action) {
+        MotionEvent.ACTION_DOWN -> {
+          lastTouchX = x
+          lastTouchY = y
+        }
+        
+        MotionEvent.ACTION_MOVE -> {
+          val dx = x - lastTouchX
+          val dy = y - lastTouchY
+          
+          var newPosX = view.x + dx
+          var newPosY = view.y + dy
+          
+          val containerView = videoPlatformView.view
+          val maxX = containerView.width - view.width
+          val maxY = containerView.height - view.height
+          
+          newPosX = newPosX.coerceIn(0f, maxX.toFloat())
+          newPosY = newPosY.coerceIn(200f, maxY.toFloat() - 296f)
+          
+          view.animate()
+            .x(newPosX)
+            .y(newPosY)
+            .setDuration(0)
+            .start()
+          
+          lastTouchX = x
+          lastTouchY = y
+        }
+        
+        else -> return
+      }
     }
     
     override fun onDisconnected(session: Session?) {
@@ -173,15 +261,15 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
         
         it.setVideoListener(object : SubscriberKit.VideoListener {
           override fun onVideoDataReceived(subscriberKit: SubscriberKit) {
-            notifySubscriberChanges(videoEnabled = true)
+            notifySubscriberConnectionChanges(videoEnabled = true)
           }
           
           override fun onVideoDisabled(subscriberKit: SubscriberKit, reason: String) {
-            notifySubscriberChanges(videoEnabled = false)
+            notifySubscriberConnectionChanges(videoEnabled = false)
           }
           
           override fun onVideoEnabled(subscriberKit: SubscriberKit, reason: String) {
-            notifySubscriberChanges(videoEnabled = true)
+            notifySubscriberConnectionChanges(videoEnabled = true)
           }
           
           override fun onVideoDisableWarning(subscriberKit: SubscriberKit) {}
@@ -189,18 +277,19 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
           override fun onVideoDisableWarningLifted(subscriberKit: SubscriberKit) {}
         })
         
-        notifySubscriberChanges(connected = true)
+        notifySubscriberConnectionChanges(connected = true)
       }
       
       session!!.subscribe(subscriber)
       videoPlatformView.subscriberContainer.addView(subscriber!!.view)
       notifyConnectionChanges(ConnectionState.ON_CALL)
+      
     }
     
     override fun onStreamDropped(session: Session?, p1: Stream?) {
       if (subscriber != null) {
         cleanUpSubscriber()
-        notifySubscriberChanges(false)
+        notifySubscriberConnectionChanges(false)
       }
     }
     
@@ -211,10 +300,15 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
   }
   
   private fun notifyConnectionChanges(state: ConnectionState) {
-    platformApi.onConnectionStateChanges(ConnectionCallback(state)) {}
+    runOnUiThread {
+      platformApi.onConnectionStateChanges(ConnectionCallback(state)) {}
+    }
   }
   
-  private fun notifySubscriberChanges(connected: Boolean? = null, videoEnabled: Boolean? = null) {
+  private fun notifySubscriberConnectionChanges(
+    connected: Boolean? = null,
+    videoEnabled: Boolean? = null
+  ) {
     subscriberConnectionCallback = if (subscriberConnectionCallback == null) {
       SubscriberConnectionCallback(
         connected ?: false,
@@ -227,11 +321,15 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
       )
     }
     
-    platformApi.onSubscriberConnectionChanges(subscriberConnectionCallback!!) {}
+    runOnUiThread {
+      platformApi.onSubscriberConnectionChanges(subscriberConnectionCallback!!) {}
+    }
   }
   
   private fun notifyError(error: String) {
-    platformApi.onError(error) {}
+    runOnUiThread {
+      platformApi.onError(error) {}
+    }
   }
   
   private fun cleanViews() {
@@ -243,6 +341,8 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
     if (publisher != null) {
       session?.unpublish(publisher)
       publisher?.capturer?.stopCapture()
+      lastTouchX = 0f
+      lastTouchY = 0f
       publisher = null
     }
     
@@ -256,5 +356,9 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
     }
     
     videoPlatformView.subscriberContainer.removeAllViews()
+  }
+  
+  private fun runOnUiThread(callback: () -> Unit) {
+    Handler(Looper.getMainLooper()).post(callback)
   }
 }

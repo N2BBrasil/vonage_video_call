@@ -17,9 +17,9 @@ enum ConnectionState {
 
 enum AudioOutputDevice {
   speaker,
-  receiver,
   headphone,
   bluetooth,
+  receiver,
 }
 
 class SubscriberConnectionCallback {
@@ -50,21 +50,26 @@ class SubscriberConnectionCallback {
 
 class AudioOutputDeviceCallback {
   AudioOutputDeviceCallback({
-    required this.device,
+    required this.type,
+    required this.name,
   });
 
-  AudioOutputDevice device;
+  AudioOutputDevice type;
+
+  String name;
 
   Object encode() {
     return <Object?>[
-      device.index,
+      type.index,
+      name,
     ];
   }
 
   static AudioOutputDeviceCallback decode(Object result) {
     result as List<Object?>;
     return AudioOutputDeviceCallback(
-      device: AudioOutputDevice.values[result[0]! as int],
+      type: AudioOutputDevice.values[result[0]! as int],
+      name: result[1]! as String,
     );
   }
 }
@@ -135,8 +140,11 @@ class _VonageVideoCallHostApiCodec extends StandardMessageCodec {
   const _VonageVideoCallHostApiCodec();
   @override
   void writeValue(WriteBuffer buffer, Object? value) {
-    if (value is SessionConfig) {
+    if (value is AudioOutputDeviceCallback) {
       buffer.putUint8(128);
+      writeValue(buffer, value.encode());
+    } else if (value is SessionConfig) {
+      buffer.putUint8(129);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -147,6 +155,8 @@ class _VonageVideoCallHostApiCodec extends StandardMessageCodec {
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
       case 128: 
+        return AudioOutputDeviceCallback.decode(readValue(buffer)!);
+      case 129: 
         return SessionConfig.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -274,7 +284,7 @@ class VonageVideoCallHostApi {
     }
   }
 
-  Future<List<String?>> listAvailableOutputDevices() async {
+  Future<List<AudioOutputDeviceCallback?>> listAvailableOutputDevices() async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
         'dev.flutter.pigeon.VonageVideoCallHostApi.listAvailableOutputDevices', codec,
         binaryMessenger: _binaryMessenger);
@@ -297,16 +307,16 @@ class VonageVideoCallHostApi {
         message: 'Host platform returned null value for non-null return value.',
       );
     } else {
-      return (replyList[0] as List<Object?>?)!.cast<String?>();
+      return (replyList[0] as List<Object?>?)!.cast<AudioOutputDeviceCallback?>();
     }
   }
 
-  Future<void> setOutputDevice(AudioOutputDevice arg_device) async {
+  Future<void> setOutputDevice(String arg_deviceName) async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
         'dev.flutter.pigeon.VonageVideoCallHostApi.setOutputDevice', codec,
         binaryMessenger: _binaryMessenger);
     final List<Object?>? replyList =
-        await channel.send(<Object?>[arg_device.index]) as List<Object?>?;
+        await channel.send(<Object?>[arg_deviceName]) as List<Object?>?;
     if (replyList == null) {
       throw PlatformException(
         code: 'channel-error',

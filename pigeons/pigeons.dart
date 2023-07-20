@@ -9,9 +9,9 @@ enum ConnectionState {
 
 enum AudioOutputDevice {
   speaker,
-  receiver,
   headphone,
   bluetooth,
+  receiver,
 }
 
 class SubscriberConnectionCallback {
@@ -25,9 +25,13 @@ class SubscriberConnectionCallback {
 }
 
 class AudioOutputDeviceCallback {
-  final AudioOutputDevice device;
+  final AudioOutputDevice type;
+  final String name;
 
-  const AudioOutputDeviceCallback(this.device);
+  const AudioOutputDeviceCallback({
+    required this.type,
+    required this.name,
+  });
 }
 
 class ConnectionCallback {
@@ -64,9 +68,9 @@ abstract class VonageVideoCallHostApi {
 
   void toggleVideo(bool enabled);
 
-  List<String> listAvailableOutputDevices();
+  List<AudioOutputDeviceCallback> listAvailableOutputDevices();
 
-  void setOutputDevice(AudioOutputDevice device);
+  void setOutputDevice(String deviceName);
 }
 
 @FlutterApi()

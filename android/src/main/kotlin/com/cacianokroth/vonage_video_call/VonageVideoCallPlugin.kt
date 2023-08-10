@@ -148,7 +148,7 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
   
   private val sessionListener: Session.SessionListener = object : Session.SessionListener {
     @SuppressLint("ClickableViewAccessibility")
-    override fun onConnected(session: Session?) {
+    override fun onConnected(session: Session) {
       publisher = Publisher.Builder(context).build().apply {
         setPublisherListener(object : PublisherKit.PublisherListener {
           override fun onStreamCreated(publisherKit: PublisherKit, stream: Stream) {
@@ -188,7 +188,7 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
         }
       }
       
-      session!!.publish(publisher)
+      session.publish(publisher)
       notifyConnectionChanges(ConnectionState.WAITING)
       
       runOnUiThread {
@@ -234,7 +234,7 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
       }
     }
     
-    override fun onDisconnected(session: Session?) {
+    override fun onDisconnected(session: Session) {
       notifyConnectionChanges(ConnectionState.DISCONNECTED)
     }
     

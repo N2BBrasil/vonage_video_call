@@ -186,6 +186,9 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
         if (view is GLSurfaceView) {
           (view as GLSurfaceView).setZOrderOnTop(true)
         }
+        
+        videoPlatformView.publisherContainer.visibility =
+          if (videoInitiallyEnabled) View.VISIBLE else View.GONE
       }
       
       session.publish(publisher)
@@ -220,11 +223,7 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
           newPosX = newPosX.coerceIn(0f, maxX.toFloat())
           newPosY = newPosY.coerceIn(200f, maxY.toFloat() - 296f)
           
-          view.animate()
-            .x(newPosX)
-            .y(newPosY)
-            .setDuration(0)
-            .start()
+          view.animate().x(newPosX).y(newPosY).setDuration(0).start()
           
           lastTouchX = x
           lastTouchY = y
@@ -306,8 +305,7 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
   }
   
   private fun notifySubscriberConnectionChanges(
-    connected: Boolean? = null,
-    videoEnabled: Boolean? = null
+    connected: Boolean? = null, videoEnabled: Boolean? = null
   ) {
     subscriberConnectionCallback = if (subscriberConnectionCallback == null) {
       SubscriberConnectionCallback(

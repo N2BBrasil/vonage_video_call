@@ -65,7 +65,6 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
   }
   
   override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-    notifyConnectionChanges(ConnectionState.DISCONNECTED)
     VonageVideoCallHostApi.setUp(binding.binaryMessenger, null)
     context = null
   }

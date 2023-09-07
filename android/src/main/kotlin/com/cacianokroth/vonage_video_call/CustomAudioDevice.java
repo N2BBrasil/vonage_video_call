@@ -1178,16 +1178,17 @@ class CustomAudioDevice extends BaseAudioDevice {
             Log.d(TAG, "BluetoothProfile.ServiceListener.onServiceConnected()");
             if (BluetoothProfile.HEADSET == type) {
                 bluetoothProfile = profile;
-                List<BluetoothDevice> devices = profile.getConnectedDevices();
 
-                Log.d(TAG, "Service Proxy Connected");
+                if (hasBluetoothPermission()) {
+                    List<BluetoothDevice> devices = profile.getConnectedDevices();
 
-                if (!devices.isEmpty() && BluetoothHeadset.STATE_CONNECTED == profile.getConnectionState(devices.get(0))) {
-                    // Force a init of bluetooth: the handler will not send a connected event if a
-                    // device is already connected at the time of proxy connection request.
-                    Intent intent = new Intent(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED);
-                    intent.putExtra(BluetoothHeadset.EXTRA_STATE, BluetoothHeadset.STATE_CONNECTED);
-                    bluetoothBroadcastReceiver.onReceive(context, intent);
+                    Log.d(TAG, "Service Proxy Connected");
+
+                    if (!devices.isEmpty() && BluetoothHeadset.STATE_CONNECTED == profile.getConnectionState(devices.get(0))) {
+                        Intent intent = new Intent(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED);
+                        intent.putExtra(BluetoothHeadset.EXTRA_STATE, BluetoothHeadset.STATE_CONNECTED);
+                        bluetoothBroadcastReceiver.onReceive(context, intent);
+                    }
                 }
             }
         }
@@ -1201,12 +1202,19 @@ class CustomAudioDevice extends BaseAudioDevice {
     private void forceInvokeConnectBluetooth() {
         Log.d(TAG, "forceConnectBluetooth() called");
 
-        // Force reconnection of bluetooth in the event of a phone call.
         synchronized (bluetoothLock) {
             bluetoothState = BluetoothState.Disconnected;
             if (bluetoothAdapter != null) {
                 bluetoothAdapter.getProfileProxy(context, bluetoothProfileServiceListener, BluetoothProfile.HEADSET);
             }
         }
+    }
+
+    private boolean hasBluetoothPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+        }
+
+        return true;
     }
 }

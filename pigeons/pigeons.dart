@@ -1,5 +1,22 @@
 import 'package:pigeon/pigeon.dart';
 
+// #docregion config
+@ConfigurePigeon(
+  PigeonOptions(
+    dartOut: 'lib/vonage_video_call_api.dart',
+    dartOptions: DartOptions(),
+    kotlinOut:
+        'android/src/main/kotlin/com/cacianokroth/vonage_video_call/VonageVideoCall.kt',
+    kotlinOptions: KotlinOptions(errorClassName: 'VonageVideoCallError'),
+    swiftOut: 'ios/Classes/VonageVideoCall.g.swift',
+    swiftOptions: SwiftOptions(),
+    // Set this to a unique prefix for your plugin or application, per Objective-C naming conventions.
+    objcOptions: ObjcOptions(prefix: 'VVC'),
+    dartPackageName: 'vonage_video_call_api',
+  ),
+)
+// #enddocregion config
+
 enum ConnectionState {
   disconnected,
   connecting,

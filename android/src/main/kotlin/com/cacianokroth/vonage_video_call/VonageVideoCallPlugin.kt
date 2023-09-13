@@ -92,11 +92,11 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
       }
     }
     
-    if (session == null) AudioDeviceManager.setAudioDevice(audioDevice)
-    
-    session = Session.Builder(context, config.apiKey, config.id).build()
-    session!!.setSessionListener(sessionListener)
-    session!!.connect(config.token)
+    AudioDeviceManager.setAudioDevice(audioDevice)
+    session = Session.Builder(context, config.apiKey, config.id).build().also {
+      it.setSessionListener(sessionListener)
+      it.connect(config.token)
+    }
   }
   
   override fun endSession() {
@@ -234,6 +234,7 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
     
     override fun onDisconnected(session: Session) {
       notifyConnectionChanges(ConnectionState.DISCONNECTED)
+      this@VonageVideoCallPlugin.session = null
     }
     
     override fun onStreamReceived(session: Session?, stream: Stream?) {
@@ -284,8 +285,9 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
       
     }
     
-    override fun onStreamDropped(session: Session?, p1: Stream?) {
-      if (subscriber != null) {
+    override fun onStreamDropped(session: Session?, stream: Stream?) {
+      if (subscriber == null) return
+      if (subscriber?.stream == stream) {
         cleanUpSubscriber()
         notifySubscriberConnectionChanges(false)
       }

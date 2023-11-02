@@ -70,6 +70,11 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
   }
   
   override fun initSession(config: SessionConfig) {
+    if (session != null && session!!.connection != null) {
+      endSession()
+    }
+    
+    
     notifyConnectionChanges(ConnectionState.CONNECTING)
     
     audioInitiallyEnabled = config.audioInitiallyEnabled
@@ -92,7 +97,10 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
       }
     }
     
-    AudioDeviceManager.setAudioDevice(audioDevice)
+    if (AudioDeviceManager.getAudioDevice() != audioDevice) {
+      AudioDeviceManager.setAudioDevice(audioDevice)
+    }
+    
     session = Session.Builder(context, config.apiKey, config.id).build().also {
       it.setSessionListener(sessionListener)
       it.connect(config.token)
@@ -103,6 +111,7 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
     notifyConnectionChanges(ConnectionState.DISCONNECTED)
     session?.setSessionListener(null)
     session?.disconnect()
+    session = null
   }
   
   override fun switchCamera() {

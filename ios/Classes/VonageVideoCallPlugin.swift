@@ -241,9 +241,7 @@ extension VonageVideoCallPlugin: OTSubscriberDelegate {
     notifyError(error: error.description)
   }
   
-  public func subscriberVideoDataReceived(_ subscriber: OTSubscriber) {
-    notifySubscriberConnectionChanges(videoEnabled: true)
-  }
+  public func subscriberVideoDataReceived(_ subscriber: OTSubscriber) {}
   
   public func subscriberVideoEnabled(_ subscriber: OTSubscriberKit, reason: OTSubscriberVideoEventReason) {
     notifySubscriberConnectionChanges(videoEnabled: true)

@@ -11,8 +11,6 @@ public class VonageVideoCallPlugin: NSObject, FlutterPlugin, VonageVideoCallHost
   private var publisher: OTPublisher?
   private var subscriber: OTSubscriber?
   
-  private var subscriberConnectionCallback: SubscriberConnectionCallback?
-  
   private var audioInitiallyEnabled = true
   private var videoInitiallyEnabled = true
   
@@ -89,17 +87,21 @@ public class VonageVideoCallPlugin: NSObject, FlutterPlugin, VonageVideoCallHost
     audioOutputControl!.setOutputDevice(deviceName: deviceName)
   }
   
+  func subscriberVideoIsEnabled() throws -> Bool {
+    return subscriber?.stream?.hasVideo ?? false
+    
+  }
+  
   private func notifyConnectionChanges(state: ConnectionState) {
     platformApi?.onConnectionStateChanges(connection: ConnectionCallback(state: state)) {}
   }
   
-  private func notifySubscriberConnectionChanges(connected: Bool? = nil, videoEnabled: Bool? = nil) {
-    subscriberConnectionCallback = SubscriberConnectionCallback(
-      connected: connected ?? subscriberConnectionCallback?.connected ?? false,
-      videoEnabled: videoEnabled ?? subscriberConnectionCallback?.videoEnabled ?? false
-    )
-    
-    platformApi?.onSubscriberConnectionChanges(subscriberConnection: subscriberConnectionCallback!) {}
+  private func notifySubscriberConnectionChanges(isConnected: Bool) {
+    platformApi?.onSubscriberConnectionChanges(connected: isConnected) {}
+  }
+  
+  private func notifySubscriberVideoChanges(isEnabled: Bool) {
+    platformApi?.onSubscriberVideoChanges(enabled: isEnabled) {}
   }
   
   private func notifyError(error: String) {
@@ -186,7 +188,7 @@ extension VonageVideoCallPlugin: OTSessionDelegate {
     
     subscriber = OTSubscriber(stream: stream, delegate: self)
     session.subscribe(subscriber!, error: &error)
-    notifySubscriberConnectionChanges(connected: true)
+    notifySubscriberConnectionChanges(isConnected: true)
     notifyConnectionChanges(state: .onCall)
     
     if(error != nil) {
@@ -200,7 +202,7 @@ extension VonageVideoCallPlugin: OTSessionDelegate {
     if(subscriber != nil) {
       if(subscriber!.stream!.streamId.elementsEqual(stream.streamId)) {
         cleanUpSubscriber()
-        notifySubscriberConnectionChanges(connected: false)
+        notifySubscriberConnectionChanges(isConnected: false)
       }
     }
   }
@@ -244,10 +246,10 @@ extension VonageVideoCallPlugin: OTSubscriberDelegate {
   public func subscriberVideoDataReceived(_ subscriber: OTSubscriber) {}
   
   public func subscriberVideoEnabled(_ subscriber: OTSubscriberKit, reason: OTSubscriberVideoEventReason) {
-    notifySubscriberConnectionChanges(videoEnabled: true)
+    notifySubscriberVideoChanges(isEnabled: true)
   }
   
   public func subscriberVideoDisabled(_ subscriber: OTSubscriberKit, reason: OTSubscriberVideoEventReason) {
-    notifySubscriberConnectionChanges(videoEnabled: false)
+    notifySubscriberVideoChanges(isEnabled: false)
   }
 }

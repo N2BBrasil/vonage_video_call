@@ -69,28 +69,6 @@ enum class AudioOutputDevice(val raw: Int) {
 }
 
 /** Generated class from Pigeon that represents data sent in messages. */
-data class SubscriberConnectionCallback (
-  val connected: Boolean,
-  val videoEnabled: Boolean
-
-) {
-  companion object {
-    @Suppress("UNCHECKED_CAST")
-    fun fromList(list: List<Any?>): SubscriberConnectionCallback {
-      val connected = list[0] as Boolean
-      val videoEnabled = list[1] as Boolean
-      return SubscriberConnectionCallback(connected, videoEnabled)
-    }
-  }
-  fun toList(): List<Any?> {
-    return listOf<Any?>(
-      connected,
-      videoEnabled,
-    )
-  }
-}
-
-/** Generated class from Pigeon that represents data sent in messages. */
 data class AudioOutputDeviceCallback (
   val type: AudioOutputDevice,
   val name: String
@@ -202,6 +180,7 @@ interface VonageVideoCallHostApi {
   fun toggleVideo(enabled: Boolean)
   fun listAvailableOutputDevices(): List<AudioOutputDeviceCallback>
   fun setOutputDevice(deviceName: String)
+  fun subscriberVideoIsEnabled(): Boolean
 
   companion object {
     /** The codec used by VonageVideoCallHostApi. */
@@ -337,6 +316,22 @@ interface VonageVideoCallHostApi {
           channel.setMessageHandler(null)
         }
       }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallHostApi.subscriberVideoIsEnabled", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            var wrapped: List<Any?>
+            try {
+              wrapped = listOf<Any?>(api.subscriberVideoIsEnabled())
+            } catch (exception: Throwable) {
+              wrapped = wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
     }
   }
 }
@@ -354,11 +349,6 @@ private object VonageVideoCallPlatformApiCodec : StandardMessageCodec() {
           ConnectionCallback.fromList(it)
         }
       }
-      130.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
-          SubscriberConnectionCallback.fromList(it)
-        }
-      }
       else -> super.readValueOfType(type, buffer)
     }
   }
@@ -370,10 +360,6 @@ private object VonageVideoCallPlatformApiCodec : StandardMessageCodec() {
       }
       is ConnectionCallback -> {
         stream.write(129)
-        writeValue(stream, value.toList())
-      }
-      is SubscriberConnectionCallback -> {
-        stream.write(130)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -402,15 +388,21 @@ class VonageVideoCallPlatformApi(private val binaryMessenger: BinaryMessenger) {
       callback()
     }
   }
-  fun onSubscriberConnectionChanges(subscriberConnectionArg: SubscriberConnectionCallback, callback: () -> Unit) {
-    val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onSubscriberConnectionChanges", codec)
-    channel.send(listOf(subscriberConnectionArg)) {
-      callback()
-    }
-  }
   fun onAudioOutputDeviceChange(outputDeviceArg: AudioOutputDeviceCallback, callback: () -> Unit) {
     val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onAudioOutputDeviceChange", codec)
     channel.send(listOf(outputDeviceArg)) {
+      callback()
+    }
+  }
+  fun onSubscriberConnectionChanges(connectedArg: Boolean, callback: () -> Unit) {
+    val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onSubscriberConnectionChanges", codec)
+    channel.send(listOf(connectedArg)) {
+      callback()
+    }
+  }
+  fun onSubscriberVideoChanges(enabledArg: Boolean, callback: () -> Unit) {
+    val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onSubscriberVideoChanges", codec)
+    channel.send(listOf(enabledArg)) {
       callback()
     }
   }

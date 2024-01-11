@@ -5,12 +5,10 @@ import AudioOutputDeviceCallback
 import ConnectionCallback
 import ConnectionState
 import SessionConfig
-import SubscriberConnectionCallback
 import VonageVideoCallHostApi
 import VonageVideoCallPlatformApi
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.drawable.GradientDrawable
 import android.opengl.GLSurfaceView
 import android.os.Handler
 import android.os.Looper
@@ -40,7 +38,6 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
   private var publisher: Publisher? = null
   
   private var subscriber: Subscriber? = null
-  private var subscriberConnectionCallback: SubscriberConnectionCallback? = null
   
   private var audioInitiallyEnabled = true
   private var videoInitiallyEnabled = true
@@ -143,6 +140,10 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
   
   override fun setOutputDevice(deviceName: String) {
     audioDevice!!.changeOutputType(audioDevice!!.availableOutputs.first { it.name == deviceName }.type)
+  }
+  
+  override fun subscriberVideoIsEnabled(): Boolean {
+    return subscriber?.stream?.hasVideo() ?: false
   }
   
   private fun getAudioOutputDevice(type: OutputDevice): AudioOutputDevice {
@@ -269,15 +270,14 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
         
         it.setVideoListener(object : SubscriberKit.VideoListener {
           override fun onVideoDataReceived(subscriberKit: SubscriberKit) {
-            notifySubscriberConnectionChanges(videoEnabled = true)
           }
           
           override fun onVideoDisabled(subscriberKit: SubscriberKit, reason: String) {
-            notifySubscriberConnectionChanges(videoEnabled = false)
+            notifySubscriberVideoChanges(false)
           }
           
           override fun onVideoEnabled(subscriberKit: SubscriberKit, reason: String) {
-            notifySubscriberConnectionChanges(videoEnabled = true)
+            notifySubscriberVideoChanges(true)
           }
           
           override fun onVideoDisableWarning(subscriberKit: SubscriberKit) {}
@@ -285,7 +285,7 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
           override fun onVideoDisableWarningLifted(subscriberKit: SubscriberKit) {}
         })
         
-        notifySubscriberConnectionChanges(connected = true)
+        notifySubscriberConnectionChanges(true)
       }
       
       session!!.subscribe(subscriber)
@@ -314,23 +314,15 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
     }
   }
   
-  private fun notifySubscriberConnectionChanges(
-    connected: Boolean? = null, videoEnabled: Boolean? = null
-  ) {
-    subscriberConnectionCallback = if (subscriberConnectionCallback == null) {
-      SubscriberConnectionCallback(
-        connected ?: false,
-        videoEnabled ?: false,
-      )
-    } else {
-      subscriberConnectionCallback!!.copy(
-        connected = connected ?: subscriberConnectionCallback!!.connected,
-        videoEnabled = videoEnabled ?: subscriberConnectionCallback!!.videoEnabled,
-      )
-    }
-    
+  private fun notifySubscriberConnectionChanges(isConnected: Boolean) {
     runOnUiThread {
-      platformApi.onSubscriberConnectionChanges(subscriberConnectionCallback!!) {}
+      platformApi.onSubscriberConnectionChanges(isConnected) {}
+    }
+  }
+  
+  private fun notifySubscriberVideoChanges(isEnabled: Boolean) {
+    runOnUiThread {
+      platformApi.onSubscriberVideoChanges(isEnabled) {}
     }
   }
   

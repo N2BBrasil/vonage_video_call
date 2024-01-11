@@ -22,32 +22,6 @@ enum AudioOutputDevice {
   receiver,
 }
 
-class SubscriberConnectionCallback {
-  SubscriberConnectionCallback({
-    required this.connected,
-    required this.videoEnabled,
-  });
-
-  bool connected;
-
-  bool videoEnabled;
-
-  Object encode() {
-    return <Object?>[
-      connected,
-      videoEnabled,
-    ];
-  }
-
-  static SubscriberConnectionCallback decode(Object result) {
-    result as List<Object?>;
-    return SubscriberConnectionCallback(
-      connected: result[0]! as bool,
-      videoEnabled: result[1]! as bool,
-    );
-  }
-}
-
 class AudioOutputDeviceCallback {
   AudioOutputDeviceCallback({
     required this.type,
@@ -332,6 +306,33 @@ class VonageVideoCallHostApi {
       return;
     }
   }
+
+  Future<bool> subscriberVideoIsEnabled() async {
+    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+        'dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallHostApi.subscriberVideoIsEnabled', codec,
+        binaryMessenger: _binaryMessenger);
+    final List<Object?>? replyList =
+        await channel.send(null) as List<Object?>?;
+    if (replyList == null) {
+      throw PlatformException(
+        code: 'channel-error',
+        message: 'Unable to establish connection on channel.',
+      );
+    } else if (replyList.length > 1) {
+      throw PlatformException(
+        code: replyList[0]! as String,
+        message: replyList[1] as String?,
+        details: replyList[2],
+      );
+    } else if (replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (replyList[0] as bool?)!;
+    }
+  }
 }
 
 class _VonageVideoCallPlatformApiCodec extends StandardMessageCodec {
@@ -343,9 +344,6 @@ class _VonageVideoCallPlatformApiCodec extends StandardMessageCodec {
       writeValue(buffer, value.encode());
     } else if (value is ConnectionCallback) {
       buffer.putUint8(129);
-      writeValue(buffer, value.encode());
-    } else if (value is SubscriberConnectionCallback) {
-      buffer.putUint8(130);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -359,8 +357,6 @@ class _VonageVideoCallPlatformApiCodec extends StandardMessageCodec {
         return AudioOutputDeviceCallback.decode(readValue(buffer)!);
       case 129: 
         return ConnectionCallback.decode(readValue(buffer)!);
-      case 130: 
-        return SubscriberConnectionCallback.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -374,9 +370,11 @@ abstract class VonageVideoCallPlatformApi {
 
   void onConnectionStateChanges(ConnectionCallback connection);
 
-  void onSubscriberConnectionChanges(SubscriberConnectionCallback subscriberConnection);
-
   void onAudioOutputDeviceChange(AudioOutputDeviceCallback outputDevice);
+
+  void onSubscriberConnectionChanges(bool connected);
+
+  void onSubscriberVideoChanges(bool enabled);
 
   void onError(String error);
 
@@ -421,25 +419,6 @@ abstract class VonageVideoCallPlatformApi {
     }
     {
       final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
-          'dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onSubscriberConnectionChanges', codec,
-          binaryMessenger: binaryMessenger);
-      if (api == null) {
-        channel.setMessageHandler(null);
-      } else {
-        channel.setMessageHandler((Object? message) async {
-          assert(message != null,
-          'Argument for dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onSubscriberConnectionChanges was null.');
-          final List<Object?> args = (message as List<Object?>?)!;
-          final SubscriberConnectionCallback? arg_subscriberConnection = (args[0] as SubscriberConnectionCallback?);
-          assert(arg_subscriberConnection != null,
-              'Argument for dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onSubscriberConnectionChanges was null, expected non-null SubscriberConnectionCallback.');
-          api.onSubscriberConnectionChanges(arg_subscriberConnection!);
-          return;
-        });
-      }
-    }
-    {
-      final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
           'dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onAudioOutputDeviceChange', codec,
           binaryMessenger: binaryMessenger);
       if (api == null) {
@@ -453,6 +432,44 @@ abstract class VonageVideoCallPlatformApi {
           assert(arg_outputDevice != null,
               'Argument for dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onAudioOutputDeviceChange was null, expected non-null AudioOutputDeviceCallback.');
           api.onAudioOutputDeviceChange(arg_outputDevice!);
+          return;
+        });
+      }
+    }
+    {
+      final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onSubscriberConnectionChanges', codec,
+          binaryMessenger: binaryMessenger);
+      if (api == null) {
+        channel.setMessageHandler(null);
+      } else {
+        channel.setMessageHandler((Object? message) async {
+          assert(message != null,
+          'Argument for dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onSubscriberConnectionChanges was null.');
+          final List<Object?> args = (message as List<Object?>?)!;
+          final bool? arg_connected = (args[0] as bool?);
+          assert(arg_connected != null,
+              'Argument for dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onSubscriberConnectionChanges was null, expected non-null bool.');
+          api.onSubscriberConnectionChanges(arg_connected!);
+          return;
+        });
+      }
+    }
+    {
+      final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onSubscriberVideoChanges', codec,
+          binaryMessenger: binaryMessenger);
+      if (api == null) {
+        channel.setMessageHandler(null);
+      } else {
+        channel.setMessageHandler((Object? message) async {
+          assert(message != null,
+          'Argument for dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onSubscriberVideoChanges was null.');
+          final List<Object?> args = (message as List<Object?>?)!;
+          final bool? arg_enabled = (args[0] as bool?);
+          assert(arg_enabled != null,
+              'Argument for dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onSubscriberVideoChanges was null, expected non-null bool.');
+          api.onSubscriberVideoChanges(arg_enabled!);
           return;
         });
       }

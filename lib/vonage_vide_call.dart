@@ -12,8 +12,9 @@ class VonageVideoCall
 
   final void Function(AudioOutputDeviceCallback)? onDeviceUpdate;
 
-  final void Function(SubscriberConnectionCallback)?
-      onSubscriberConnectionChange;
+  final void Function(bool)? onSubscriberConnectionChange;
+
+  final void Function(bool)? onSubscriberVideoChange;
 
   final void Function(String)? onVideoCallError;
 
@@ -22,6 +23,7 @@ class VonageVideoCall
   VonageVideoCall({
     this.onConnectionChange,
     this.onSubscriberConnectionChange,
+    this.onSubscriberVideoChange,
     this.onDeviceUpdate,
     this.onVideoCallError,
     this.onConnectedOnSession,
@@ -45,10 +47,13 @@ class VonageVideoCall
   }
 
   @override
-  void onSubscriberConnectionChanges(
-    SubscriberConnectionCallback subscriberConnection,
-  ) {
-    onSubscriberConnectionChange?.call(subscriberConnection);
+  void onSubscriberConnectionChanges(bool connected) {
+    onSubscriberConnectionChange?.call(connected);
+  }
+
+  @override
+  void onSubscriberVideoChanges(bool enabled) {
+    onSubscriberVideoChange?.call(enabled);
   }
 
   @override
@@ -116,6 +121,15 @@ class VonageVideoCall
       return await _vonageHostApi.setOutputDevice(deviceName);
     } catch (_) {
       rethrow;
+    }
+  }
+
+  @override
+  Future<bool> subscriberVideoIsEnabled() {
+    try {
+      return _vonageHostApi.subscriberVideoIsEnabled();
+    } catch (_) {
+      return Future.value(false);
     }
   }
 }

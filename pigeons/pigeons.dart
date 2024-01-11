@@ -31,16 +31,6 @@ enum AudioOutputDevice {
   receiver,
 }
 
-class SubscriberConnectionCallback {
-  final bool connected;
-  final bool videoEnabled;
-
-  const SubscriberConnectionCallback({
-    this.connected = false,
-    this.videoEnabled = false,
-  });
-}
-
 class AudioOutputDeviceCallback {
   final AudioOutputDevice type;
   final String name;
@@ -88,6 +78,8 @@ abstract class VonageVideoCallHostApi {
   List<AudioOutputDeviceCallback> listAvailableOutputDevices();
 
   void setOutputDevice(String deviceName);
+
+  bool subscriberVideoIsEnabled();
 }
 
 @FlutterApi()
@@ -96,11 +88,11 @@ abstract class VonageVideoCallPlatformApi {
 
   void onConnectionStateChanges(ConnectionCallback connection);
 
-  void onSubscriberConnectionChanges(
-    SubscriberConnectionCallback subscriberConnection,
-  );
-
   void onAudioOutputDeviceChange(AudioOutputDeviceCallback outputDevice);
+
+  void onSubscriberConnectionChanges(bool connected);
+
+  void onSubscriberVideoChanges(bool enabled);
 
   void onError(String error);
 }

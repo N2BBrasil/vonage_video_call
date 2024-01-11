@@ -53,28 +53,6 @@ enum AudioOutputDevice: Int {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct SubscriberConnectionCallback {
-  var connected: Bool
-  var videoEnabled: Bool
-
-  static func fromList(_ list: [Any?]) -> SubscriberConnectionCallback? {
-    let connected = list[0] as! Bool
-    let videoEnabled = list[1] as! Bool
-
-    return SubscriberConnectionCallback(
-      connected: connected,
-      videoEnabled: videoEnabled
-    )
-  }
-  func toList() -> [Any?] {
-    return [
-      connected,
-      videoEnabled,
-    ]
-  }
-}
-
-/// Generated class from Pigeon that represents data sent in messages.
 struct AudioOutputDeviceCallback {
   var type: AudioOutputDevice
   var name: String
@@ -197,6 +175,7 @@ protocol VonageVideoCallHostApi {
   func toggleVideo(enabled: Bool) throws
   func listAvailableOutputDevices() throws -> [AudioOutputDeviceCallback]
   func setOutputDevice(deviceName: String) throws
+  func subscriberVideoIsEnabled() throws -> Bool
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -304,6 +283,19 @@ class VonageVideoCallHostApiSetup {
     } else {
       setOutputDeviceChannel.setMessageHandler(nil)
     }
+    let subscriberVideoIsEnabledChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallHostApi.subscriberVideoIsEnabled", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      subscriberVideoIsEnabledChannel.setMessageHandler { _, reply in
+        do {
+          let result = try api.subscriberVideoIsEnabled()
+          reply(wrapResult(result))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      subscriberVideoIsEnabledChannel.setMessageHandler(nil)
+    }
   }
 }
 private class VonageVideoCallPlatformApiCodecReader: FlutterStandardReader {
@@ -313,8 +305,6 @@ private class VonageVideoCallPlatformApiCodecReader: FlutterStandardReader {
         return AudioOutputDeviceCallback.fromList(self.readValue() as! [Any?])
       case 129:
         return ConnectionCallback.fromList(self.readValue() as! [Any?])
-      case 130:
-        return SubscriberConnectionCallback.fromList(self.readValue() as! [Any?])
       default:
         return super.readValue(ofType: type)
     }
@@ -328,9 +318,6 @@ private class VonageVideoCallPlatformApiCodecWriter: FlutterStandardWriter {
       super.writeValue(value.toList())
     } else if let value = value as? ConnectionCallback {
       super.writeByte(129)
-      super.writeValue(value.toList())
-    } else if let value = value as? SubscriberConnectionCallback {
-      super.writeByte(130)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -373,15 +360,21 @@ class VonageVideoCallPlatformApi {
       completion()
     }
   }
-  func onSubscriberConnectionChanges(subscriberConnection subscriberConnectionArg: SubscriberConnectionCallback, completion: @escaping () -> Void) {
-    let channel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onSubscriberConnectionChanges", binaryMessenger: binaryMessenger, codec: codec)
-    channel.sendMessage([subscriberConnectionArg] as [Any?]) { _ in
-      completion()
-    }
-  }
   func onAudioOutputDeviceChange(outputDevice outputDeviceArg: AudioOutputDeviceCallback, completion: @escaping () -> Void) {
     let channel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onAudioOutputDeviceChange", binaryMessenger: binaryMessenger, codec: codec)
     channel.sendMessage([outputDeviceArg] as [Any?]) { _ in
+      completion()
+    }
+  }
+  func onSubscriberConnectionChanges(connected connectedArg: Bool, completion: @escaping () -> Void) {
+    let channel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onSubscriberConnectionChanges", binaryMessenger: binaryMessenger, codec: codec)
+    channel.sendMessage([connectedArg] as [Any?]) { _ in
+      completion()
+    }
+  }
+  func onSubscriberVideoChanges(enabled enabledArg: Bool, completion: @escaping () -> Void) {
+    let channel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onSubscriberVideoChanges", binaryMessenger: binaryMessenger, codec: codec)
+    channel.sendMessage([enabledArg] as [Any?]) { _ in
       completion()
     }
   }

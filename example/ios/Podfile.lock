@@ -2,22 +2,13 @@ PODS:
   - Flutter (1.0.0)
   - integration_test (0.0.1):
     - Flutter
-  - OpenTok (2.22.3):
-    - VonageWebRTC (= 84.0.21)
-  - vonage_video_call (0.0.1):
+  - vonage_video_call (0.0.6):
     - Flutter
-    - OpenTok
-  - VonageWebRTC (84.0.21)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - integration_test (from `.symlinks/plugins/integration_test/ios`)
   - vonage_video_call (from `.symlinks/plugins/vonage_video_call/ios`)
-
-SPEC REPOS:
-  trunk:
-    - OpenTok
-    - VonageWebRTC
 
 EXTERNAL SOURCES:
   Flutter:
@@ -28,12 +19,10 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/vonage_video_call/ios"
 
 SPEC CHECKSUMS:
-  Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
+  Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   integration_test: 13825b8a9334a850581300559b8839134b124670
-  OpenTok: 532cdb6254b7bf41c64f8ad761469d6f7a154c7b
-  vonage_video_call: 647d362558e61235e00ee6b867ae670fa7bcfdde
-  VonageWebRTC: cfa7aefc3fe6e95bcbd778e8973af90fe9bfd497
+  vonage_video_call: 8da269b8c2c98b291ebd46fc95772ffd6b677c3e
 
-PODFILE CHECKSUM: 70d9d25280d0dd177a5f637cdb0f0b0b12c6a189
+PODFILE CHECKSUM: 765cb26dcffcb6bfce605dbb897c4841e3dc03c6
 
-COCOAPODS: 1.11.3
+COCOAPODS: 1.15.2

@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'vonage_video_call'
-  s.version          = '1.0.0'
+  s.version          = '1.0.1'
   s.summary          = 'A new Flutter plugin project.'
   s.description      = <<-DESC
 A new Flutter plugin project.
@@ -16,6 +16,7 @@ A new Flutter plugin project.
   s.static_framework = true
   s.source_files = 'Classes/**/*'
   s.ios.dependency 'Flutter'
+  s.ios.dependency 'VonageClientSDKVideo'
   s.ios.deployment_target = '13.0'
 
   # Flutter.framework does not contain a i386 slice.

@@ -2,7 +2,7 @@ group 'com.cacianokroth.vonage_video_call'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '1.7.10'
+    ext.kotlin_version = '1.9.22'
     repositories {
         google()
         mavenCentral()
@@ -28,8 +28,8 @@ android {
     compileSdkVersion 33
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
@@ -42,13 +42,13 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 23
+        minSdkVersion 24
     }
 
     dependencies {
         testImplementation 'org.jetbrains.kotlin:kotlin-test'
         testImplementation 'org.mockito:mockito-core:5.0.0'
         implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-        implementation 'com.opentok.android:opentok-android-sdk:2.27.1'
+        implementation 'com.opentok.android:opentok-android-sdk:2.28.3'
     }
 }

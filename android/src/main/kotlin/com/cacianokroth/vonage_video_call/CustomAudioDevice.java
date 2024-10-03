@@ -1,6 +1,7 @@
 package com.cacianokroth.vonage_video_call;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothHeadset;
@@ -559,6 +560,7 @@ class CustomAudioDevice extends BaseAudioDevice {
 
     }
 
+    @SuppressLint("MissingPermission")
     @Override
     public boolean initCapturer() {
         // get the minimum buffer size that can be used

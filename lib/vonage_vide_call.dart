@@ -1,7 +1,6 @@
 import 'package:vonage_video_call/vonage_video_call_api.dart';
 
-export 'vonage_video_call_api.dart'
-    show ConnectionState, AudioOutputDevice, SessionConfig;
+export 'vonage_video_call_api.dart' show ConnectionState, SessionConfig;
 export 'vonage_video_call_view.dart';
 
 class VonageVideoCall
@@ -9,8 +8,6 @@ class VonageVideoCall
   final _vonageHostApi = VonageVideoCallHostApi();
 
   final void Function(ConnectionCallback)? onConnectionChange;
-
-  final void Function(AudioOutputDeviceCallback)? onDeviceUpdate;
 
   final void Function(bool)? onSubscriberConnectionChange;
 
@@ -24,7 +21,6 @@ class VonageVideoCall
     this.onConnectionChange,
     this.onSubscriberConnectionChange,
     this.onSubscriberVideoChange,
-    this.onDeviceUpdate,
     this.onVideoCallError,
     this.onConnectedOnSession,
   }) {
@@ -39,11 +35,6 @@ class VonageVideoCall
   @override
   void onConnectionStateChanges(ConnectionCallback connection) {
     onConnectionChange?.call(connection);
-  }
-
-  @override
-  void onAudioOutputDeviceChange(AudioOutputDeviceCallback outputDevice) {
-    onDeviceUpdate?.call(outputDevice);
   }
 
   @override
@@ -102,24 +93,6 @@ class VonageVideoCall
     try {
       return await _vonageHostApi.toggleVideo(enabled);
     } catch (e) {
-      rethrow;
-    }
-  }
-
-  @override
-  Future<List<AudioOutputDeviceCallback?>> listAvailableOutputDevices() async {
-    try {
-      return await _vonageHostApi.listAvailableOutputDevices();
-    } catch (_) {
-      rethrow;
-    }
-  }
-
-  @override
-  Future<void> setOutputDevice(String deviceName) async {
-    try {
-      return await _vonageHostApi.setOutputDevice(deviceName);
-    } catch (_) {
       rethrow;
     }
   }

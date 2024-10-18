@@ -55,41 +55,6 @@ enum class ConnectionState(val raw: Int) {
   }
 }
 
-enum class AudioOutputDevice(val raw: Int) {
-  SPEAKER(0),
-  HEADPHONE(1),
-  BLUETOOTH(2),
-  RECEIVER(3);
-
-  companion object {
-    fun ofRaw(raw: Int): AudioOutputDevice? {
-      return values().firstOrNull { it.raw == raw }
-    }
-  }
-}
-
-/** Generated class from Pigeon that represents data sent in messages. */
-data class AudioOutputDeviceCallback (
-  val type: AudioOutputDevice,
-  val name: String
-
-) {
-  companion object {
-    @Suppress("UNCHECKED_CAST")
-    fun fromList(list: List<Any?>): AudioOutputDeviceCallback {
-      val type = AudioOutputDevice.ofRaw(list[0] as Int)!!
-      val name = list[1] as String
-      return AudioOutputDeviceCallback(type, name)
-    }
-  }
-  fun toList(): List<Any?> {
-    return listOf<Any?>(
-      type.raw,
-      name,
-    )
-  }
-}
-
 /** Generated class from Pigeon that represents data sent in messages. */
 data class ConnectionCallback (
   val state: ConnectionState
@@ -145,11 +110,6 @@ private object VonageVideoCallHostApiCodec : StandardMessageCodec() {
     return when (type) {
       128.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          AudioOutputDeviceCallback.fromList(it)
-        }
-      }
-      129.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
           SessionConfig.fromList(it)
         }
       }
@@ -158,12 +118,8 @@ private object VonageVideoCallHostApiCodec : StandardMessageCodec() {
   }
   override fun writeValue(stream: ByteArrayOutputStream, value: Any?)   {
     when (value) {
-      is AudioOutputDeviceCallback -> {
-        stream.write(128)
-        writeValue(stream, value.toList())
-      }
       is SessionConfig -> {
-        stream.write(129)
+        stream.write(128)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -178,8 +134,6 @@ interface VonageVideoCallHostApi {
   fun switchCamera()
   fun toggleAudio(enabled: Boolean)
   fun toggleVideo(enabled: Boolean)
-  fun listAvailableOutputDevices(): List<AudioOutputDeviceCallback>
-  fun setOutputDevice(deviceName: String)
   fun subscriberVideoIsEnabled(): Boolean
 
   companion object {
@@ -282,41 +236,6 @@ interface VonageVideoCallHostApi {
         }
       }
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallHostApi.listAvailableOutputDevices", codec)
-        if (api != null) {
-          channel.setMessageHandler { _, reply ->
-            var wrapped: List<Any?>
-            try {
-              wrapped = listOf<Any?>(api.listAvailableOutputDevices())
-            } catch (exception: Throwable) {
-              wrapped = wrapError(exception)
-            }
-            reply.reply(wrapped)
-          }
-        } else {
-          channel.setMessageHandler(null)
-        }
-      }
-      run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallHostApi.setOutputDevice", codec)
-        if (api != null) {
-          channel.setMessageHandler { message, reply ->
-            val args = message as List<Any?>
-            val deviceNameArg = args[0] as String
-            var wrapped: List<Any?>
-            try {
-              api.setOutputDevice(deviceNameArg)
-              wrapped = listOf<Any?>(null)
-            } catch (exception: Throwable) {
-              wrapped = wrapError(exception)
-            }
-            reply.reply(wrapped)
-          }
-        } else {
-          channel.setMessageHandler(null)
-        }
-      }
-      run {
         val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallHostApi.subscriberVideoIsEnabled", codec)
         if (api != null) {
           channel.setMessageHandler { _, reply ->
@@ -341,11 +260,6 @@ private object VonageVideoCallPlatformApiCodec : StandardMessageCodec() {
     return when (type) {
       128.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          AudioOutputDeviceCallback.fromList(it)
-        }
-      }
-      129.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
           ConnectionCallback.fromList(it)
         }
       }
@@ -354,12 +268,8 @@ private object VonageVideoCallPlatformApiCodec : StandardMessageCodec() {
   }
   override fun writeValue(stream: ByteArrayOutputStream, value: Any?)   {
     when (value) {
-      is AudioOutputDeviceCallback -> {
-        stream.write(128)
-        writeValue(stream, value.toList())
-      }
       is ConnectionCallback -> {
-        stream.write(129)
+        stream.write(128)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -385,12 +295,6 @@ class VonageVideoCallPlatformApi(private val binaryMessenger: BinaryMessenger) {
   fun onConnectionStateChanges(connectionArg: ConnectionCallback, callback: () -> Unit) {
     val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onConnectionStateChanges", codec)
     channel.send(listOf(connectionArg)) {
-      callback()
-    }
-  }
-  fun onAudioOutputDeviceChange(outputDeviceArg: AudioOutputDeviceCallback, callback: () -> Unit) {
-    val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onAudioOutputDeviceChange", codec)
-    channel.send(listOf(outputDeviceArg)) {
       callback()
     }
   }

@@ -5,7 +5,6 @@ import OpenTok
 public class VonageVideoCallPlugin: NSObject, FlutterPlugin, VonageVideoCallHostApi {
   private var platformApi: VonageVideoCallPlatformApi?
   private var videoFactory: VonageVideoCallVideoFactory?
-  private var audioOutputControl: AudioOutputControl?
   
   private var session: OTSession?
   private var publisher: OTPublisher?
@@ -21,7 +20,6 @@ public class VonageVideoCallPlugin: NSObject, FlutterPlugin, VonageVideoCallHost
     VonageVideoCallHostApiSetup.setUp(binaryMessenger: binaryMessenger, api: instance)
     instance.platformApi = VonageVideoCallPlatformApi(binaryMessenger: binaryMessenger)
     instance.videoFactory = VonageVideoCallVideoFactory(binaryMessenger: binaryMessenger)
-    instance.audioOutputControl = AudioOutputControl()
     
     registrar.register(instance.videoFactory!, withId:"VonageVideoCallRendererView")
   }
@@ -38,12 +36,6 @@ public class VonageVideoCallPlugin: NSObject, FlutterPlugin, VonageVideoCallHost
     
     audioInitiallyEnabled = config.audioInitiallyEnabled
     videoInitiallyEnabled = config.videoInitiallyEnabled
-    
-    audioOutputControl?.registerAudioRouteChangeBlock(onChange: { callback in
-      print("onAudioOutputDeviceChange \(callback.name)");
-      
-      self.notifyAudioOutputChange(audioOtputDevice: callback)
-    })
     
     session = OTSession(apiKey: config.apiKey, sessionId: config.id, delegate: self)
     session?.connect(withToken: config.token, error: &error)
@@ -75,18 +67,6 @@ public class VonageVideoCallPlugin: NSObject, FlutterPlugin, VonageVideoCallHost
     videoFactory?.publisherView?.isHidden = !enabled
   }
   
-  func listAvailableOutputDevices() throws -> [AudioOutputDeviceCallback] {
-    if(audioOutputControl == nil) {
-      return []
-    }
-    
-    return audioOutputControl!.getAvailableInputs()
-  }
-  
-  func setOutputDevice(deviceName: String) throws {
-    audioOutputControl!.setOutputDevice(deviceName: deviceName)
-  }
-  
   func subscriberVideoIsEnabled() throws -> Bool {
     return subscriber?.stream?.hasVideo ?? false
     
@@ -108,9 +88,6 @@ public class VonageVideoCallPlugin: NSObject, FlutterPlugin, VonageVideoCallHost
     platformApi?.onError(error: error) {}
   }
   
-  private func notifyAudioOutputChange(audioOtputDevice: AudioOutputDeviceCallback) {
-    platformApi?.onAudioOutputDeviceChange(outputDevice: audioOtputDevice) {}
-  }
   
   private func cleanViews() {
     cleanUpPublisher()

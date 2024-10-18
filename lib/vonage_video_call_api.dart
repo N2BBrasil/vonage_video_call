@@ -15,39 +15,6 @@ enum ConnectionState {
   on_call,
 }
 
-enum AudioOutputDevice {
-  speaker,
-  headphone,
-  bluetooth,
-  receiver,
-}
-
-class AudioOutputDeviceCallback {
-  AudioOutputDeviceCallback({
-    required this.type,
-    required this.name,
-  });
-
-  AudioOutputDevice type;
-
-  String name;
-
-  Object encode() {
-    return <Object?>[
-      type.index,
-      name,
-    ];
-  }
-
-  static AudioOutputDeviceCallback decode(Object result) {
-    result as List<Object?>;
-    return AudioOutputDeviceCallback(
-      type: AudioOutputDevice.values[result[0]! as int],
-      name: result[1]! as String,
-    );
-  }
-}
-
 class ConnectionCallback {
   ConnectionCallback({
     required this.state,
@@ -114,11 +81,8 @@ class _VonageVideoCallHostApiCodec extends StandardMessageCodec {
   const _VonageVideoCallHostApiCodec();
   @override
   void writeValue(WriteBuffer buffer, Object? value) {
-    if (value is AudioOutputDeviceCallback) {
+    if (value is SessionConfig) {
       buffer.putUint8(128);
-      writeValue(buffer, value.encode());
-    } else if (value is SessionConfig) {
-      buffer.putUint8(129);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -129,8 +93,6 @@ class _VonageVideoCallHostApiCodec extends StandardMessageCodec {
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
       case 128: 
-        return AudioOutputDeviceCallback.decode(readValue(buffer)!);
-      case 129: 
         return SessionConfig.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -258,55 +220,6 @@ class VonageVideoCallHostApi {
     }
   }
 
-  Future<List<AudioOutputDeviceCallback?>> listAvailableOutputDevices() async {
-    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
-        'dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallHostApi.listAvailableOutputDevices', codec,
-        binaryMessenger: _binaryMessenger);
-    final List<Object?>? replyList =
-        await channel.send(null) as List<Object?>?;
-    if (replyList == null) {
-      throw PlatformException(
-        code: 'channel-error',
-        message: 'Unable to establish connection on channel.',
-      );
-    } else if (replyList.length > 1) {
-      throw PlatformException(
-        code: replyList[0]! as String,
-        message: replyList[1] as String?,
-        details: replyList[2],
-      );
-    } else if (replyList[0] == null) {
-      throw PlatformException(
-        code: 'null-error',
-        message: 'Host platform returned null value for non-null return value.',
-      );
-    } else {
-      return (replyList[0] as List<Object?>?)!.cast<AudioOutputDeviceCallback?>();
-    }
-  }
-
-  Future<void> setOutputDevice(String arg_deviceName) async {
-    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
-        'dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallHostApi.setOutputDevice', codec,
-        binaryMessenger: _binaryMessenger);
-    final List<Object?>? replyList =
-        await channel.send(<Object?>[arg_deviceName]) as List<Object?>?;
-    if (replyList == null) {
-      throw PlatformException(
-        code: 'channel-error',
-        message: 'Unable to establish connection on channel.',
-      );
-    } else if (replyList.length > 1) {
-      throw PlatformException(
-        code: replyList[0]! as String,
-        message: replyList[1] as String?,
-        details: replyList[2],
-      );
-    } else {
-      return;
-    }
-  }
-
   Future<bool> subscriberVideoIsEnabled() async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
         'dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallHostApi.subscriberVideoIsEnabled', codec,
@@ -339,11 +252,8 @@ class _VonageVideoCallPlatformApiCodec extends StandardMessageCodec {
   const _VonageVideoCallPlatformApiCodec();
   @override
   void writeValue(WriteBuffer buffer, Object? value) {
-    if (value is AudioOutputDeviceCallback) {
+    if (value is ConnectionCallback) {
       buffer.putUint8(128);
-      writeValue(buffer, value.encode());
-    } else if (value is ConnectionCallback) {
-      buffer.putUint8(129);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -354,8 +264,6 @@ class _VonageVideoCallPlatformApiCodec extends StandardMessageCodec {
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
       case 128: 
-        return AudioOutputDeviceCallback.decode(readValue(buffer)!);
-      case 129: 
         return ConnectionCallback.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -369,8 +277,6 @@ abstract class VonageVideoCallPlatformApi {
   void onSessionConnected(String connectionId);
 
   void onConnectionStateChanges(ConnectionCallback connection);
-
-  void onAudioOutputDeviceChange(AudioOutputDeviceCallback outputDevice);
 
   void onSubscriberConnectionChanges(bool connected);
 
@@ -413,25 +319,6 @@ abstract class VonageVideoCallPlatformApi {
           assert(arg_connection != null,
               'Argument for dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onConnectionStateChanges was null, expected non-null ConnectionCallback.');
           api.onConnectionStateChanges(arg_connection!);
-          return;
-        });
-      }
-    }
-    {
-      final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
-          'dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onAudioOutputDeviceChange', codec,
-          binaryMessenger: binaryMessenger);
-      if (api == null) {
-        channel.setMessageHandler(null);
-      } else {
-        channel.setMessageHandler((Object? message) async {
-          assert(message != null,
-          'Argument for dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onAudioOutputDeviceChange was null.');
-          final List<Object?> args = (message as List<Object?>?)!;
-          final AudioOutputDeviceCallback? arg_outputDevice = (args[0] as AudioOutputDeviceCallback?);
-          assert(arg_outputDevice != null,
-              'Argument for dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onAudioOutputDeviceChange was null, expected non-null AudioOutputDeviceCallback.');
-          api.onAudioOutputDeviceChange(arg_outputDevice!);
           return;
         });
       }

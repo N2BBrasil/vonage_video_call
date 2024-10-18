@@ -1,7 +1,5 @@
 package com.cacianokroth.vonage_video_call
 
-import AudioOutputDevice
-import AudioOutputDeviceCallback
 import ConnectionCallback
 import ConnectionState
 import SessionConfig
@@ -33,12 +31,8 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
   
   private var context: Context? = null
   private var session: Session? = null
-  private var audioDevice: CustomAudioDevice? = null
-  
   private var publisher: Publisher? = null
-  
   private var subscriber: Subscriber? = null
-  
   private var audioInitiallyEnabled = true
   private var videoInitiallyEnabled = true
   
@@ -77,27 +71,6 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
     audioInitiallyEnabled = config.audioInitiallyEnabled
     videoInitiallyEnabled = config.videoInitiallyEnabled
     
-    if (audioDevice == null) {
-      audioDevice = CustomAudioDevice(
-        context,
-      ) { device ->
-        Log.d(TAG, "Audio output changed to ${device.type}")
-        
-        runOnUiThread {
-          platformApi.onAudioOutputDeviceChange(
-            AudioOutputDeviceCallback(
-              type = getAudioOutputDevice(device.type),
-              name = device.name,
-            )
-          ) {}
-        }
-      }
-    }
-    
-    if (AudioDeviceManager.getAudioDevice() != audioDevice) {
-      AudioDeviceManager.setAudioDevice(audioDevice)
-    }
-    
     session = Session.Builder(context, config.apiKey, config.id).build().also {
       it.setSessionListener(sessionListener)
       it.connect(config.token)
@@ -129,30 +102,8 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
     }
   }
   
-  override fun listAvailableOutputDevices(): List<AudioOutputDeviceCallback> {
-    return audioDevice!!.availableOutputs.map {
-      AudioOutputDeviceCallback(
-        getAudioOutputDevice(it.type),
-        it.name,
-      )
-    }
-  }
-  
-  override fun setOutputDevice(deviceName: String) {
-    audioDevice!!.changeOutputType(audioDevice!!.availableOutputs.first { it.name == deviceName }.type)
-  }
-  
   override fun subscriberVideoIsEnabled(): Boolean {
     return subscriber?.stream?.hasVideo() ?: false
-  }
-  
-  private fun getAudioOutputDevice(type: OutputDevice): AudioOutputDevice {
-    return when (type) {
-      OutputDevice.SPEAKER_PHONE -> AudioOutputDevice.SPEAKER
-      OutputDevice.BLUETOOTH -> AudioOutputDevice.BLUETOOTH
-      OutputDevice.RECEIVER -> AudioOutputDevice.RECEIVER
-      OutputDevice.HEAD_PHONES -> AudioOutputDevice.HEADPHONE
-    }
   }
   
   private val sessionListener: Session.SessionListener = object : Session.SessionListener {

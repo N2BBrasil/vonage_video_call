@@ -24,23 +24,6 @@ enum ConnectionState {
   on_call,
 }
 
-enum AudioOutputDevice {
-  speaker,
-  headphone,
-  bluetooth,
-  receiver,
-}
-
-class AudioOutputDeviceCallback {
-  final AudioOutputDevice type;
-  final String name;
-
-  const AudioOutputDeviceCallback({
-    required this.type,
-    required this.name,
-  });
-}
-
 class ConnectionCallback {
   final ConnectionState state;
 
@@ -75,10 +58,6 @@ abstract class VonageVideoCallHostApi {
 
   void toggleVideo(bool enabled);
 
-  List<AudioOutputDeviceCallback> listAvailableOutputDevices();
-
-  void setOutputDevice(String deviceName);
-
   bool subscriberVideoIsEnabled();
 }
 
@@ -87,8 +66,6 @@ abstract class VonageVideoCallPlatformApi {
   void onSessionConnected(String connectionId);
 
   void onConnectionStateChanges(ConnectionCallback connection);
-
-  void onAudioOutputDeviceChange(AudioOutputDeviceCallback outputDevice);
 
   void onSubscriberConnectionChanges(bool connected);
 

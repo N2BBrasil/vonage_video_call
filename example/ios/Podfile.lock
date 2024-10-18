@@ -2,13 +2,19 @@ PODS:
   - Flutter (1.0.0)
   - integration_test (0.0.1):
     - Flutter
-  - vonage_video_call (0.0.6):
+  - vonage_video_call (1.0.2):
     - Flutter
+    - VonageClientSDKVideo
+  - VonageClientSDKVideo (2.28.2)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - integration_test (from `.symlinks/plugins/integration_test/ios`)
   - vonage_video_call (from `.symlinks/plugins/vonage_video_call/ios`)
+
+SPEC REPOS:
+  trunk:
+    - VonageClientSDKVideo
 
 EXTERNAL SOURCES:
   Flutter:
@@ -20,9 +26,10 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
-  integration_test: 13825b8a9334a850581300559b8839134b124670
-  vonage_video_call: 8da269b8c2c98b291ebd46fc95772ffd6b677c3e
+  integration_test: 252f60fa39af5e17c3aa9899d35d908a0721b573
+  vonage_video_call: 6d1aa6183f32f78fd83a03baef3b405bbd35fb60
+  VonageClientSDKVideo: 653fdddfa3c99a0019671e563604fc61ddfc43cc
 
-PODFILE CHECKSUM: 765cb26dcffcb6bfce605dbb897c4841e3dc03c6
+PODFILE CHECKSUM: 70d9d25280d0dd177a5f637cdb0f0b0b12c6a189
 
 COCOAPODS: 1.15.2

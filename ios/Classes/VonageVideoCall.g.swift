@@ -45,35 +45,6 @@ enum ConnectionState: Int {
   case onCall = 3
 }
 
-enum AudioOutputDevice: Int {
-  case speaker = 0
-  case headphone = 1
-  case bluetooth = 2
-  case receiver = 3
-}
-
-/// Generated class from Pigeon that represents data sent in messages.
-struct AudioOutputDeviceCallback {
-  var type: AudioOutputDevice
-  var name: String
-
-  static func fromList(_ list: [Any?]) -> AudioOutputDeviceCallback? {
-    let type = AudioOutputDevice(rawValue: list[0] as! Int)!
-    let name = list[1] as! String
-
-    return AudioOutputDeviceCallback(
-      type: type,
-      name: name
-    )
-  }
-  func toList() -> [Any?] {
-    return [
-      type.rawValue,
-      name,
-    ]
-  }
-}
-
 /// Generated class from Pigeon that represents data sent in messages.
 struct ConnectionCallback {
   var state: ConnectionState
@@ -129,8 +100,6 @@ private class VonageVideoCallHostApiCodecReader: FlutterStandardReader {
   override func readValue(ofType type: UInt8) -> Any? {
     switch type {
       case 128:
-        return AudioOutputDeviceCallback.fromList(self.readValue() as! [Any?])
-      case 129:
         return SessionConfig.fromList(self.readValue() as! [Any?])
       default:
         return super.readValue(ofType: type)
@@ -140,11 +109,8 @@ private class VonageVideoCallHostApiCodecReader: FlutterStandardReader {
 
 private class VonageVideoCallHostApiCodecWriter: FlutterStandardWriter {
   override func writeValue(_ value: Any) {
-    if let value = value as? AudioOutputDeviceCallback {
+    if let value = value as? SessionConfig {
       super.writeByte(128)
-      super.writeValue(value.toList())
-    } else if let value = value as? SessionConfig {
-      super.writeByte(129)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -173,8 +139,6 @@ protocol VonageVideoCallHostApi {
   func switchCamera() throws
   func toggleAudio(enabled: Bool) throws
   func toggleVideo(enabled: Bool) throws
-  func listAvailableOutputDevices() throws -> [AudioOutputDeviceCallback]
-  func setOutputDevice(deviceName: String) throws
   func subscriberVideoIsEnabled() throws -> Bool
 }
 
@@ -255,34 +219,6 @@ class VonageVideoCallHostApiSetup {
     } else {
       toggleVideoChannel.setMessageHandler(nil)
     }
-    let listAvailableOutputDevicesChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallHostApi.listAvailableOutputDevices", binaryMessenger: binaryMessenger, codec: codec)
-    if let api = api {
-      listAvailableOutputDevicesChannel.setMessageHandler { _, reply in
-        do {
-          let result = try api.listAvailableOutputDevices()
-          reply(wrapResult(result))
-        } catch {
-          reply(wrapError(error))
-        }
-      }
-    } else {
-      listAvailableOutputDevicesChannel.setMessageHandler(nil)
-    }
-    let setOutputDeviceChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallHostApi.setOutputDevice", binaryMessenger: binaryMessenger, codec: codec)
-    if let api = api {
-      setOutputDeviceChannel.setMessageHandler { message, reply in
-        let args = message as! [Any?]
-        let deviceNameArg = args[0] as! String
-        do {
-          try api.setOutputDevice(deviceName: deviceNameArg)
-          reply(wrapResult(nil))
-        } catch {
-          reply(wrapError(error))
-        }
-      }
-    } else {
-      setOutputDeviceChannel.setMessageHandler(nil)
-    }
     let subscriberVideoIsEnabledChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallHostApi.subscriberVideoIsEnabled", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       subscriberVideoIsEnabledChannel.setMessageHandler { _, reply in
@@ -302,8 +238,6 @@ private class VonageVideoCallPlatformApiCodecReader: FlutterStandardReader {
   override func readValue(ofType type: UInt8) -> Any? {
     switch type {
       case 128:
-        return AudioOutputDeviceCallback.fromList(self.readValue() as! [Any?])
-      case 129:
         return ConnectionCallback.fromList(self.readValue() as! [Any?])
       default:
         return super.readValue(ofType: type)
@@ -313,11 +247,8 @@ private class VonageVideoCallPlatformApiCodecReader: FlutterStandardReader {
 
 private class VonageVideoCallPlatformApiCodecWriter: FlutterStandardWriter {
   override func writeValue(_ value: Any) {
-    if let value = value as? AudioOutputDeviceCallback {
+    if let value = value as? ConnectionCallback {
       super.writeByte(128)
-      super.writeValue(value.toList())
-    } else if let value = value as? ConnectionCallback {
-      super.writeByte(129)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -357,12 +288,6 @@ class VonageVideoCallPlatformApi {
   func onConnectionStateChanges(connection connectionArg: ConnectionCallback, completion: @escaping () -> Void) {
     let channel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onConnectionStateChanges", binaryMessenger: binaryMessenger, codec: codec)
     channel.sendMessage([connectionArg] as [Any?]) { _ in
-      completion()
-    }
-  }
-  func onAudioOutputDeviceChange(outputDevice outputDeviceArg: AudioOutputDeviceCallback, completion: @escaping () -> Void) {
-    let channel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.vonage_video_call_api.VonageVideoCallPlatformApi.onAudioOutputDeviceChange", binaryMessenger: binaryMessenger, codec: codec)
-    channel.sendMessage([outputDeviceArg] as [Any?]) { _ in
       completion()
     }
   }

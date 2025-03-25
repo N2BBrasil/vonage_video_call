@@ -53,6 +53,6 @@ android {
         testImplementation 'org.jetbrains.kotlin:kotlin-test'
         testImplementation 'org.mockito:mockito-core:5.0.0'
         implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-        implementation 'com.opentok.android:opentok-android-sdk:2.28.3'
+        implementation 'com.opentok.android:opentok-android-sdk:2.29.1'
     }
 }

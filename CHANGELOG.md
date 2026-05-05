@@ -1,3 +1,8 @@
+## 1.4.1
+
+* Fix: Remove force unwrap (`session!!`) in `initSession` eliminating race condition NPE risk (Android)
+* Fix: Call `publisher.destroy()` after unpublish to immediately release camera and audio hardware (Android)
+
 ## 1.4.0
 
 * Fix: Proper resource cleanup in endSession (camera, publisher, subscriber)

@@ -1,6 +1,6 @@
 name: vonage_video_call
 description: Vonage 1 to 1 video call plugin
-version: 1.3.0
+version: 1.4.0
 homepage: https://github.com/cacianokroth
 
 environment:

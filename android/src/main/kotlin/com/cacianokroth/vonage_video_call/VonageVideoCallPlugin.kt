@@ -64,7 +64,7 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
   }
   
   override fun initSession(config: SessionConfig) {
-    if (session != null && session!!.connection != null) {
+    if (session?.connection != null) {
       endSession()
     }
     
@@ -312,6 +312,7 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
   private fun cleanUpPublisher() {
     if (publisher != null) {
       session?.unpublish(publisher)
+      publisher?.destroy()
       lastTouchX = 0f
       lastTouchY = 0f
       publisher = null

@@ -16,7 +16,7 @@ A new Flutter plugin project.
   s.static_framework = true
   s.source_files = 'Classes/**/*'
   s.ios.dependency 'Flutter'
-  s.ios.dependency 'VonageClientSDKVideo', '2.32.1'
+  s.ios.dependency 'VonageClientSDKVideo', '2.33.0'
   s.ios.deployment_target = '15.0'
 
   # Flutter.framework does not contain a i386 slice.

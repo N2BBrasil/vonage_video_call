@@ -25,8 +25,13 @@ public class VonageVideoCallPlugin: NSObject, FlutterPlugin, VonageVideoCallHost
   }
   
   public func detachFromEngine(for registrar: FlutterPluginRegistrar) {
+    cleanUpPublisher()
+    cleanUpSubscriber()
+    session?.disconnect(nil)
+    session = nil
     VonageVideoCallHostApiSetup.setUp(binaryMessenger: registrar.messenger(), api: nil)
     platformApi = nil
+    videoFactory = nil
   }
   
   func initSession(config: SessionConfig) throws {
@@ -49,8 +54,15 @@ public class VonageVideoCallPlugin: NSObject, FlutterPlugin, VonageVideoCallHost
   func endSession() throws {
     var error: OTError?
     
+    cleanUpPublisher()
+    cleanUpSubscriber()
     notifyConnectionChanges(state: .disconnected)
     session?.disconnect(&error)
+    session = nil
+    
+    if let error = error {
+      notifyError(error: error.description)
+    }
   }
   
   func switchCamera() throws {
@@ -95,18 +107,26 @@ public class VonageVideoCallPlugin: NSObject, FlutterPlugin, VonageVideoCallHost
   }
   
   private func cleanUpPublisher() {
-    if (publisher != nil) {
-      publisher?.view?.removeFromSuperview()
-      session?.unpublish(publisher!, error: nil)
-      publisher = nil
+    guard let pub = publisher else { return }
+    var error: OTError?
+    pub.view?.removeFromSuperview()
+    session?.unpublish(pub, error: &error)
+    publisher = nil
+    videoFactory?.publisherView = nil
+    if let error = error {
+      notifyError(error: error.description)
     }
   }
   
   private func cleanUpSubscriber() {
-    if (subscriber != nil) {
-      subscriber?.view?.removeFromSuperview()
-      session?.unsubscribe(subscriber!, error: nil)
-      subscriber = nil
+    guard let sub = subscriber else { return }
+    var error: OTError?
+    sub.view?.removeFromSuperview()
+    session?.unsubscribe(sub, error: &error)
+    subscriber = nil
+    videoFactory?.subscriberView = nil
+    if let error = error {
+      notifyError(error: error.description)
     }
   }
 }
@@ -146,9 +166,11 @@ extension VonageVideoCallPlugin: OTSessionDelegate {
     notifyConnectionChanges(state: .disconnected)
   }
   
-  // OnError
   public func session(_ session: OTSession, didFailWithError error: OTError) {
     notifyError(error: error.description)
+    cleanViews()
+    notifyConnectionChanges(state: .disconnected)
+    self.session = nil
   }
   
   // OnStreamCreated

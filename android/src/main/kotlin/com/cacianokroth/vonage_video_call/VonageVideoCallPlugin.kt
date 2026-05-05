@@ -78,8 +78,9 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
   }
   
   override fun endSession() {
+    cleanUpSubscriber()
+    cleanUpPublisher()
     notifyConnectionChanges(ConnectionState.DISCONNECTED)
-    session?.setSessionListener(null)
     session?.disconnect()
     session = null
   }
@@ -255,6 +256,9 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
     
     override fun onError(p0: Session?, opentokError: OpentokError?) {
       if (opentokError != null) notifyError(opentokError.message)
+      cleanViews()
+      notifyConnectionChanges(ConnectionState.DISCONNECTED)
+      this@VonageVideoCallPlugin.session = null
     }
     
   }
@@ -291,7 +295,6 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
   private fun cleanUpPublisher() {
     if (publisher != null) {
       session?.unpublish(publisher)
-      publisher?.capturer?.stopCapture()
       lastTouchX = 0f
       lastTouchY = 0f
       publisher = null

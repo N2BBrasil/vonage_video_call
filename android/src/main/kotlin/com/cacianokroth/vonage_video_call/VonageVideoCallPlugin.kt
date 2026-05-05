@@ -24,8 +24,10 @@ import com.opentok.android.Stream
 import com.opentok.android.Subscriber
 import com.opentok.android.SubscriberKit
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 
-class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
+class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAware {
   private lateinit var platformApi: VonageVideoCallPlatformApi
   private lateinit var videoPlatformView: VonageVideoCallPlatformView
   
@@ -329,5 +331,19 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
   
   private fun runOnUiThread(callback: () -> Unit) {
     Handler(Looper.getMainLooper()).post(callback)
+  }
+  
+  override fun onAttachedToActivity(binding: ActivityPluginBinding) {}
+  
+  override fun onDetachedFromActivityForConfigChanges() {
+    session?.onPause()
+  }
+  
+  override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+    session?.onResume()
+  }
+  
+  override fun onDetachedFromActivity() {
+    session?.onPause()
   }
 }

@@ -42,7 +42,9 @@ public class VonageVideoCallPlugin: NSObject, FlutterPlugin, VonageVideoCallHost
     audioInitiallyEnabled = config.audioInitiallyEnabled
     videoInitiallyEnabled = config.videoInitiallyEnabled
     
-    session = OTSession(apiKey: config.apiKey, sessionId: config.id, delegate: self)
+    let settings = OTSessionSettings()
+    settings.apiQueue = DispatchQueue.main
+    session = OTSession(apiKey: config.apiKey, sessionId: config.id, delegate: self, settings: settings)
     session?.connect(withToken: config.token, error: &error)
     
     

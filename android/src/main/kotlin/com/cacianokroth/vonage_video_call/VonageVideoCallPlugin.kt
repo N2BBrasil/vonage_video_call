@@ -57,6 +57,7 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
   
   override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
     VonageVideoCallHostApi.setUp(binding.binaryMessenger, null)
+    VonageVideoCallVideoFactory.resetViewInstance()
     context = null
   }
   
@@ -203,6 +204,8 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
       if (subscriber != null) return
       if (stream?.streamId.equals(publisher?.stream?.streamId)) return
       
+      val currentSession = this@VonageVideoCallPlugin.session ?: return
+      
       subscriber = Subscriber.Builder(context, stream).build().also {
         it.renderer.setStyle(
           BaseVideoRenderer.STYLE_VIDEO_SCALE, BaseVideoRenderer.STYLE_VIDEO_FILL
@@ -236,12 +239,11 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
           
           override fun onVideoDisableWarningLifted(subscriberKit: SubscriberKit) {}
         })
-        
-        notifySubscriberConnectionChanges(true)
       }
       
-      session!!.subscribe(subscriber)
-      videoPlatformView.subscriberContainer.addView(subscriber!!.view)
+      currentSession.subscribe(subscriber)
+      subscriber?.view?.let { videoPlatformView.subscriberContainer.addView(it) }
+      notifySubscriberConnectionChanges(true)
       notifyConnectionChanges(ConnectionState.ON_CALL)
       
     }

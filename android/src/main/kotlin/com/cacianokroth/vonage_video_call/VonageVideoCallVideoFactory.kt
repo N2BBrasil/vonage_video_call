@@ -7,13 +7,17 @@ import io.flutter.plugin.platform.PlatformViewFactory
 
 class VonageVideoCallVideoFactory : PlatformViewFactory(StandardMessageCodec.INSTANCE) {
   companion object {
-    private lateinit var view: VonageVideoCallPlatformView
+    private var view: VonageVideoCallPlatformView? = null
     
     fun getViewInstance(context: Context?): VonageVideoCallPlatformView {
-      if (!this::view.isInitialized) {
+      if (view == null) {
         view = VonageVideoCallPlatformView(context)
       }
-      return view
+      return view!!
+    }
+    
+    fun resetViewInstance() {
+      view = null
     }
   }
   

@@ -46,8 +46,8 @@ public class VonageVideoCallPlugin: NSObject, FlutterPlugin, VonageVideoCallHost
     session?.connect(withToken: config.token, error: &error)
     
     
-    if(error != nil) {
-      notifyError(error: error!.description)
+    if let error = error {
+      notifyError(error: error.description)
     }
   }
   
@@ -135,31 +135,33 @@ extension VonageVideoCallPlugin: OTSessionDelegate {
   public func sessionDidConnect(_ sessionDelegate: OTSession) {
     var error: OTError?
     
-    publisher = OTPublisher(delegate: self)
+    let pub = OTPublisher(delegate: self)
+    publisher = pub
     
-    publisher!.publishAudio = audioInitiallyEnabled
-    publisher!.publishVideo = videoInitiallyEnabled
+    pub.publishAudio = audioInitiallyEnabled
+    pub.publishVideo = videoInitiallyEnabled
     
-    session?.publish(publisher!, error: &error)
+    session?.publish(pub, error: &error)
     
-    if(error != nil) {
-      notifyError(error: error!.description)
+    if let error = error {
+      notifyError(error: error.description)
     }
     
-    if(publisher?.view == nil) {
-      return
-    }
+    guard let pubView = pub.view else { return }
     
-    if(videoFactory?.view == nil) {
-      videoFactory?.publisherView = publisher!.view
+    if videoFactory?.view == nil {
+      videoFactory?.publisherView = pubView
     } else {
-      videoFactory?.view?.addPublisherView(publisher!.view!)
+      videoFactory?.view?.addPublisherView(pubView)
     }
     
     videoFactory?.publisherView?.isHidden = !videoInitiallyEnabled
     
     notifyConnectionChanges(state: .waiting)
-    platformApi?.onSessionConnected(connectionId: session!.connection!.connectionId) {}
+    
+    if let connectionId = session?.connection?.connectionId {
+      platformApi?.onSessionConnected(connectionId: connectionId) {}
+    }
   }
   
   public func sessionDidDisconnect(_ session: OTSession) {
@@ -173,37 +175,27 @@ extension VonageVideoCallPlugin: OTSessionDelegate {
     self.session = nil
   }
   
-  // OnStreamCreated
   public func session(_ session: OTSession, streamCreated stream: OTStream) {
+    guard subscriber == nil else { return }
+    guard stream.streamId != publisher?.stream?.streamId else { return }
+    
     var error: OTError?
+    let sub = OTSubscriber(stream: stream, delegate: self)
+    subscriber = sub
     
-    if(subscriber != nil) {
-      return
-    }
-    
-    if(stream.streamId == publisher?.stream?.streamId) {
-      return
-    }
-    
-    subscriber = OTSubscriber(stream: stream, delegate: self)
-    session.subscribe(subscriber!, error: &error)
+    session.subscribe(sub, error: &error)
     notifySubscriberConnectionChanges(isConnected: true)
     notifyConnectionChanges(state: .onCall)
     
-    if(error != nil) {
-      notifyError(error: error!.description)
+    if let error = error {
+      notifyError(error: error.description)
     }
-    
   }
   
-  // OnStreamDestroyed
   public func session(_ session: OTSession, streamDestroyed stream: OTStream) {
-    if(subscriber != nil) {
-      if(subscriber!.stream!.streamId.elementsEqual(stream.streamId)) {
-        cleanUpSubscriber()
-        notifySubscriberConnectionChanges(isConnected: false)
-      }
-    }
+    guard let sub = subscriber, sub.stream?.streamId == stream.streamId else { return }
+    cleanUpSubscriber()
+    notifySubscriberConnectionChanges(isConnected: false)
   }
 }
 
@@ -223,19 +215,17 @@ extension VonageVideoCallPlugin: OTPublisherDelegate {
 
 extension VonageVideoCallPlugin: OTSubscriberDelegate {
   public func subscriberDidConnect(toStream subscriberKit: OTSubscriberKit) {
-    if(subscriber?.view == nil) {
-      return
-    }
+    guard let sub = subscriber, let subView = sub.view else { return }
     
-    subscriber?.viewScaleBehavior = .fill
+    sub.viewScaleBehavior = .fill
     
-    if(videoFactory?.view == nil) {
-      videoFactory?.subscriberView = subscriber!.view
+    if videoFactory?.view == nil {
+      videoFactory?.subscriberView = subView
     } else {
-      videoFactory?.view?.addSubscriberView(subscriber!.view!)
+      videoFactory?.view?.addSubscriberView(subView)
     }
     
-    subscriber?.view?.contentMode = .scaleAspectFill
+    subView.contentMode = .scaleAspectFill
   }
   
   public func subscriber(_ subscriber: OTSubscriberKit, didFailWithError error: OTError) {

@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 enum ConnectionState {
   disconnected,
   connecting,
+  reconnecting,
   waiting,
   on_call,
 }

@@ -74,6 +74,7 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
     
     session = Session.Builder(context, config.apiKey, config.id).build().also {
       it.setSessionListener(sessionListener)
+      it.setReconnectionListener(reconnectionListener)
       it.connect(config.token)
     }
   }
@@ -253,6 +254,7 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
       if (subscriber?.stream == stream) {
         cleanUpSubscriber()
         notifySubscriberConnectionChanges(false)
+        notifyConnectionChanges(ConnectionState.WAITING)
       }
     }
     
@@ -263,6 +265,17 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi {
       this@VonageVideoCallPlugin.session = null
     }
     
+  }
+  
+  private val reconnectionListener: Session.ReconnectionListener = object : Session.ReconnectionListener {
+    override fun onReconnecting(session: Session) {
+      notifyConnectionChanges(ConnectionState.RECONNECTING)
+    }
+    
+    override fun onReconnected(session: Session) {
+      val hasSubscriber = subscriber != null
+      notifyConnectionChanges(if (hasSubscriber) ConnectionState.ON_CALL else ConnectionState.WAITING)
+    }
   }
   
   private fun notifyConnectionChanges(state: ConnectionState) {

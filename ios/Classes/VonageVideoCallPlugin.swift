@@ -196,6 +196,16 @@ extension VonageVideoCallPlugin: OTSessionDelegate {
     guard let sub = subscriber, sub.stream?.streamId == stream.streamId else { return }
     cleanUpSubscriber()
     notifySubscriberConnectionChanges(isConnected: false)
+    notifyConnectionChanges(state: .waiting)
+  }
+  
+  public func sessionDidBeginReconnecting(_ session: OTSession) {
+    notifyConnectionChanges(state: .reconnecting)
+  }
+  
+  public func sessionDidReconnect(_ session: OTSession) {
+    let hasSubscriber = subscriber != nil
+    notifyConnectionChanges(state: hasSubscriber ? .onCall : .waiting)
   }
 }
 

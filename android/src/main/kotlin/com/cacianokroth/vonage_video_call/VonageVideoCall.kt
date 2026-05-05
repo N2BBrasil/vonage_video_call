@@ -45,8 +45,9 @@ class VonageVideoCallError (
 enum class ConnectionState(val raw: Int) {
   DISCONNECTED(0),
   CONNECTING(1),
-  WAITING(2),
-  ON_CALL(3);
+  RECONNECTING(2),
+  WAITING(3),
+  ON_CALL(4);
 
   companion object {
     fun ofRaw(raw: Int): ConnectionState? {

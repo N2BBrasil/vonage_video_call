@@ -41,8 +41,9 @@ private func nilOrValue<T>(_ value: Any?) -> T? {
 enum ConnectionState: Int {
   case disconnected = 0
   case connecting = 1
-  case waiting = 2
-  case onCall = 3
+  case reconnecting = 2
+  case waiting = 3
+  case onCall = 4
 }
 
 /// Generated class from Pigeon that represents data sent in messages.

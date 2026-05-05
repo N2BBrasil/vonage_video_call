@@ -20,6 +20,7 @@ import 'package:pigeon/pigeon.dart';
 enum ConnectionState {
   disconnected,
   connecting,
+  reconnecting,
   waiting,
   on_call,
 }

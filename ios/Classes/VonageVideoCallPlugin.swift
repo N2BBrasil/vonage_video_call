@@ -42,9 +42,7 @@ public class VonageVideoCallPlugin: NSObject, FlutterPlugin, VonageVideoCallHost
     audioInitiallyEnabled = config.audioInitiallyEnabled
     videoInitiallyEnabled = config.videoInitiallyEnabled
     
-    let settings = OTSessionSettings()
-    settings.apiQueue = DispatchQueue.main
-    session = OTSession(apiKey: config.apiKey, sessionId: config.id, delegate: self, settings: settings)
+    session = OTSession(apiKey: config.apiKey, sessionId: config.id, delegate: self)
     session?.connect(withToken: config.token, error: &error)
     
     
@@ -137,7 +135,7 @@ extension VonageVideoCallPlugin: OTSessionDelegate {
   public func sessionDidConnect(_ sessionDelegate: OTSession) {
     var error: OTError?
     
-    let pub = OTPublisher(delegate: self)
+    guard let pub = OTPublisher(delegate: self) else { return }
     publisher = pub
     
     pub.publishAudio = audioInitiallyEnabled
@@ -182,7 +180,7 @@ extension VonageVideoCallPlugin: OTSessionDelegate {
     guard stream.streamId != publisher?.stream?.streamId else { return }
     
     var error: OTError?
-    let sub = OTSubscriber(stream: stream, delegate: self)
+    guard let sub = OTSubscriber(stream: stream, delegate: self) else { return }
     subscriber = sub
     
     session.subscribe(sub, error: &error)

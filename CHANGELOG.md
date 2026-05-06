@@ -1,9 +1,12 @@
+## 1.4.2
+
+* Fix: Remove `OTSessionSettings.apiQueue` usage which does not exist in this SDK version (iOS)
+* Fix: Use `guard let` for `OTPublisher` and `OTSubscriber` initializers that return optional (iOS)
+
 ## 1.4.1
 
 * Fix: Remove force unwrap (`session!!`) in `initSession` eliminating race condition NPE risk (Android)
 * Fix: Call `publisher.destroy()` after unpublish to immediately release camera and audio hardware (Android)
-* Fix: Remove `OTSessionSettings.apiQueue` usage which does not exist in this SDK version (iOS)
-* Fix: Use `guard let` for `OTPublisher` and `OTSubscriber` initializers that return optional (iOS)
 
 ## 1.4.0
 

@@ -1,3 +1,13 @@
+## 1.4.3
+
+* Fix: Notify subscriber disconnection and transition to WAITING when remote stream is destroyed or subscriber disconnects (Android)
+* Fix: Clean up subscriber resources on disconnection (Android)
+* Fix: Restore Activity lifecycle handling for session pause/resume and GLSurfaceView (Android)
+* Fix: Use `setZOrderMediaOverlay` instead of `setZOrderOnTop` for publisher overlay (Android)
+* Fix: Track subscriber video enabled state via delegate callbacks instead of stream property (iOS)
+* Fix: Notify subscriber disconnection and transition to WAITING when publisher stream is destroyed (iOS)
+* Fix: Use `initExpensiveAndroidView` for platform view to improve rendering with OpenGL (Flutter)
+
 ## 1.4.2
 
 * Fix: Remove `OTSessionSettings.apiQueue` usage which does not exist in this SDK version (iOS)

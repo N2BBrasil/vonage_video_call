@@ -12,6 +12,7 @@ public class VonageVideoCallPlugin: NSObject, FlutterPlugin, VonageVideoCallHost
   
   private var audioInitiallyEnabled = true
   private var videoInitiallyEnabled = true
+  private var isSubscriberVideoEnabled = false
   
   public static func register(with registrar: FlutterPluginRegistrar) {
     let instance:VonageVideoCallPlugin! = VonageVideoCallPlugin()
@@ -80,8 +81,7 @@ public class VonageVideoCallPlugin: NSObject, FlutterPlugin, VonageVideoCallHost
   }
   
   func subscriberVideoIsEnabled() throws -> Bool {
-    return subscriber?.stream?.hasVideo ?? false
-    
+    return isSubscriberVideoEnabled
   }
   
   private func notifyConnectionChanges(state: ConnectionState) {
@@ -125,6 +125,7 @@ public class VonageVideoCallPlugin: NSObject, FlutterPlugin, VonageVideoCallHost
     session?.unsubscribe(sub, error: &error)
     subscriber = nil
     videoFactory?.subscriberView = nil
+    isSubscriberVideoEnabled = false
     if let error = error {
       notifyError(error: error.description)
     }
@@ -215,7 +216,11 @@ extension VonageVideoCallPlugin: OTPublisherDelegate {
   }
   
   public func publisher(_ publisher: OTPublisherKit, streamDestroyed stream: OTStream) {
+    if subscriber != nil {
+      notifySubscriberConnectionChanges(isConnected: false)
+    }
     cleanViews()
+    notifyConnectionChanges(state: .waiting)
   }
   
   public func publisher(_ publisher: OTPublisherKit, didFailWithError error: OTError) {
@@ -245,10 +250,12 @@ extension VonageVideoCallPlugin: OTSubscriberDelegate {
   public func subscriberVideoDataReceived(_ subscriber: OTSubscriber) {}
   
   public func subscriberVideoEnabled(_ subscriber: OTSubscriberKit, reason: OTSubscriberVideoEventReason) {
+    isSubscriberVideoEnabled = true
     notifySubscriberVideoChanges(isEnabled: true)
   }
-  
+
   public func subscriberVideoDisabled(_ subscriber: OTSubscriberKit, reason: OTSubscriberVideoEventReason) {
+    isSubscriberVideoEnabled = false
     notifySubscriberVideoChanges(isEnabled: false)
   }
 }

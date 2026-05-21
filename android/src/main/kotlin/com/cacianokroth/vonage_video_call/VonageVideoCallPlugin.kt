@@ -6,8 +6,11 @@ import SessionConfig
 import VonageVideoCallHostApi
 import VonageVideoCallPlatformApi
 import android.annotation.SuppressLint
+import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.opengl.GLSurfaceView
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -40,7 +43,11 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
   
   private var lastTouchX = 0f
   private var lastTouchY = 0f
-  
+
+  private var currentActivity: Activity? = null
+  private var activityLifecycleCallbacks: Application.ActivityLifecycleCallbacks? = null
+  private var publisherGlSurfaceView: GLSurfaceView? = null
+
   companion object {
     private val TAG = VonageVideoCallPlugin::class.java.simpleName
   }
@@ -124,8 +131,12 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
             Log.d(
               TAG, "onStreamDestroyed: Publisher Stream Destroyed. Own stream ${stream.streamId}"
             )
-            
+
+            if (subscriber != null) {
+              notifySubscriberConnectionChanges(false)
+            }
             cleanViews()
+            notifyConnectionChanges(ConnectionState.WAITING)
           }
           
           override fun onError(publisherKit: PublisherKit, opentokError: OpentokError) {
@@ -149,7 +160,9 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
         }
         
         if (view is GLSurfaceView) {
-          (view as GLSurfaceView).setZOrderOnTop(true)
+          val glView = view as GLSurfaceView
+          glView.setZOrderMediaOverlay(true)
+          publisherGlSurfaceView = glView
         }
         
         videoPlatformView.publisherContainer.visibility =
@@ -218,6 +231,8 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
           override fun onConnected(subscriberKit: SubscriberKit) {}
           
           override fun onDisconnected(subscriberKit: SubscriberKit) {
+            notifySubscriberConnectionChanges(false)
+            cleanUpSubscriber()
             notifyConnectionChanges(ConnectionState.WAITING)
           }
           
@@ -317,7 +332,7 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
       lastTouchY = 0f
       publisher = null
     }
-    
+    publisherGlSurfaceView = null
     videoPlatformView.publisherContainer.removeAllViews()
   }
   
@@ -334,17 +349,46 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
     Handler(Looper.getMainLooper()).post(callback)
   }
   
-  override fun onAttachedToActivity(binding: ActivityPluginBinding) {}
-  
+  override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+    currentActivity = binding.activity
+    activityLifecycleCallbacks = object : Application.ActivityLifecycleCallbacks {
+      override fun onActivityPaused(activity: Activity) {
+        if (activity != currentActivity) return
+        publisherGlSurfaceView?.onPause()
+        session?.onPause()
+      }
+      override fun onActivityResumed(activity: Activity) {
+        if (activity != currentActivity) return
+        session?.onResume()
+        publisherGlSurfaceView?.onResume()
+      }
+      override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+      override fun onActivityStarted(activity: Activity) {}
+      override fun onActivityStopped(activity: Activity) {}
+      override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+      override fun onActivityDestroyed(activity: Activity) {}
+    }
+    binding.activity.application.registerActivityLifecycleCallbacks(activityLifecycleCallbacks)
+  }
+
   override fun onDetachedFromActivityForConfigChanges() {
-    session?.onPause()
+    unregisterLifecycleCallbacks()
   }
-  
+
   override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
-    session?.onResume()
+    onAttachedToActivity(binding)
   }
-  
+
   override fun onDetachedFromActivity() {
     session?.onPause()
+    unregisterLifecycleCallbacks()
+  }
+
+  private fun unregisterLifecycleCallbacks() {
+    activityLifecycleCallbacks?.let {
+      currentActivity?.application?.unregisterActivityLifecycleCallbacks(it)
+    }
+    activityLifecycleCallbacks = null
+    currentActivity = null
   }
 }

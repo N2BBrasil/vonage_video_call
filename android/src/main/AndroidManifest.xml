@@ -2,4 +2,14 @@
   package="com.cacianokroth.vonage_video_call">
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+
+    <application>
+        <service
+            android:name=".VonageCallForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="microphone|camera" />
+    </application>
 </manifest>

@@ -40,7 +40,12 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
   private var subscriber: Subscriber? = null
   private var audioInitiallyEnabled = true
   private var videoInitiallyEnabled = true
-  
+
+  private var isEnding = false
+  private var isReinitializing = false
+  private var isCallActive = false
+  private val remoteStreams = mutableMapOf<String, Stream>()
+
   private var lastTouchX = 0f
   private var lastTouchY = 0f
 
@@ -71,11 +76,15 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
   }
   
   override fun initSession(config: SessionConfig) {
-    if (session?.connection != null) {
+    if (session != null) {
+      isReinitializing = true
       endSession()
+      isReinitializing = false
     }
-    
-    
+
+    isEnding = false
+    remoteStreams.clear()
+
     notifyConnectionChanges(ConnectionState.CONNECTING)
     
     audioInitiallyEnabled = config.audioInitiallyEnabled
@@ -89,9 +98,16 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
   }
   
   override fun endSession() {
+    isEnding = true
+    stopForegroundService()
     cleanUpSubscriber()
     cleanUpPublisher()
-    notifyConnectionChanges(ConnectionState.DISCONNECTED)
+    remoteStreams.clear()
+    if (!isReinitializing) {
+      notifyConnectionChanges(ConnectionState.DISCONNECTED)
+    }
+    session?.setSessionListener(null)
+    session?.setReconnectionListener(null)
     session?.disconnect()
     session = null
   }
@@ -121,6 +137,9 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
   private val sessionListener: Session.SessionListener = object : Session.SessionListener {
     @SuppressLint("ClickableViewAccessibility")
     override fun onConnected(session: Session) {
+      isCallActive = true
+      context?.let { VonageCallForegroundService.start(it) }
+
       publisher = Publisher.Builder(context).build().apply {
         setPublisherListener(object : PublisherKit.PublisherListener {
           override fun onStreamCreated(publisherKit: PublisherKit, stream: Stream) {
@@ -132,11 +151,9 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
               TAG, "onStreamDestroyed: Publisher Stream Destroyed. Own stream ${stream.streamId}"
             )
 
-            if (subscriber != null) {
-              notifySubscriberConnectionChanges(false)
-            }
-            cleanViews()
-            notifyConnectionChanges(ConnectionState.WAITING)
+            if (isEnding || this@VonageVideoCallPlugin.session == null) return
+
+            cleanUpPublisher()
           }
           
           override fun onError(publisherKit: PublisherKit, opentokError: OpentokError) {
@@ -197,9 +214,15 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
           val containerView = videoPlatformView.view
           val maxX = containerView.width - view.width
           val maxY = containerView.height - view.height
-          
-          newPosX = newPosX.coerceIn(0f, maxX.toFloat())
-          newPosY = newPosY.coerceIn(200f, maxY.toFloat() - 296f)
+
+          val density = containerView.resources.displayMetrics.density
+          val topMargin = 200f * density
+          val bottomMargin = 296f * density
+
+          newPosX = newPosX.coerceIn(0f, maxX.toFloat().coerceAtLeast(0f))
+          val minY = topMargin
+          val maxYf = (maxY.toFloat() - bottomMargin)
+          newPosY = newPosY.coerceIn(minY.coerceAtMost(maxYf), maxYf.coerceAtLeast(minY))
           
           view.animate().x(newPosX).y(newPosY).setDuration(0).start()
           
@@ -212,78 +235,105 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
     }
     
     override fun onDisconnected(session: Session) {
+      isEnding = false
+      stopForegroundService()
       notifyConnectionChanges(ConnectionState.DISCONNECTED)
       this@VonageVideoCallPlugin.session = null
     }
     
     override fun onStreamReceived(session: Session?, stream: Stream?) {
+      if (stream == null) return
+      if (stream.streamId.equals(publisher?.stream?.streamId)) return
+
+      remoteStreams[stream.streamId] = stream
+
+      if (subscriber?.stream?.streamId == stream.streamId) return
       if (subscriber != null) return
-      if (stream?.streamId.equals(publisher?.stream?.streamId)) return
-      
-      val currentSession = this@VonageVideoCallPlugin.session ?: return
-      
-      subscriber = Subscriber.Builder(context, stream).build().also {
-        it.renderer.setStyle(
-          BaseVideoRenderer.STYLE_VIDEO_SCALE, BaseVideoRenderer.STYLE_VIDEO_FILL
-        )
-        
-        it.setSubscriberListener(object : SubscriberKit.SubscriberListener {
-          override fun onConnected(subscriberKit: SubscriberKit) {}
-          
-          override fun onDisconnected(subscriberKit: SubscriberKit) {
-            notifySubscriberConnectionChanges(false)
-            cleanUpSubscriber()
-            notifyConnectionChanges(ConnectionState.WAITING)
-          }
-          
-          override fun onError(subscriberKit: SubscriberKit, opentokError: OpentokError) {
-            notifyError(opentokError.message)
-          }
-        })
-        
-        it.setVideoListener(object : SubscriberKit.VideoListener {
-          override fun onVideoDataReceived(subscriberKit: SubscriberKit) {
-          }
-          
-          override fun onVideoDisabled(subscriberKit: SubscriberKit, reason: String) {
-            notifySubscriberVideoChanges(false)
-          }
-          
-          override fun onVideoEnabled(subscriberKit: SubscriberKit, reason: String) {
-            notifySubscriberVideoChanges(true)
-          }
-          
-          override fun onVideoDisableWarning(subscriberKit: SubscriberKit) {}
-          
-          override fun onVideoDisableWarningLifted(subscriberKit: SubscriberKit) {}
-        })
-      }
-      
-      currentSession.subscribe(subscriber)
-      subscriber?.view?.let { videoPlatformView.subscriberContainer.addView(it) }
-      notifySubscriberConnectionChanges(true)
-      notifyConnectionChanges(ConnectionState.ON_CALL)
-      
+
+      subscribeTo(stream)
     }
-    
+
     override fun onStreamDropped(session: Session?, stream: Stream?) {
-      if (subscriber == null) return
-      if (subscriber?.stream == stream) {
-        cleanUpSubscriber()
-        notifySubscriberConnectionChanges(false)
+      if (stream == null) return
+
+      remoteStreams.remove(stream.streamId)
+
+      if (subscriber?.stream?.streamId != stream.streamId) return
+
+      cleanUpSubscriber()
+      notifySubscriberConnectionChanges(false)
+
+      val nextStream = remoteStreams.values.lastOrNull()
+      if (nextStream != null) {
+        subscribeTo(nextStream)
+      } else {
         notifyConnectionChanges(ConnectionState.WAITING)
       }
     }
     
     override fun onError(p0: Session?, opentokError: OpentokError?) {
       if (opentokError != null) notifyError(opentokError.message)
+      stopForegroundService()
       cleanViews()
       notifyConnectionChanges(ConnectionState.DISCONNECTED)
       this@VonageVideoCallPlugin.session = null
     }
-    
+
   }
-  
+
+  private fun subscribeTo(stream: Stream) {
+    val currentSession = session ?: return
+
+    subscriber = Subscriber.Builder(context, stream).build().also {
+      it.renderer.setStyle(
+        BaseVideoRenderer.STYLE_VIDEO_SCALE, BaseVideoRenderer.STYLE_VIDEO_FILL
+      )
+
+      it.setSubscriberListener(object : SubscriberKit.SubscriberListener {
+        override fun onConnected(subscriberKit: SubscriberKit) {
+          runOnUiThread {
+            subscriber?.view?.let { videoPlatformView.subscriberContainer.addView(it) }
+          }
+          notifySubscriberConnectionChanges(true)
+          notifyConnectionChanges(ConnectionState.ON_CALL)
+          notifySubscriberVideoChanges(subscriberKit.stream?.hasVideo() ?: false)
+        }
+
+        override fun onDisconnected(subscriberKit: SubscriberKit) {
+          notifySubscriberConnectionChanges(false)
+          cleanUpSubscriber()
+          notifyConnectionChanges(ConnectionState.WAITING)
+        }
+
+        override fun onError(subscriberKit: SubscriberKit, opentokError: OpentokError) {
+          notifyError(opentokError.message)
+          cleanUpSubscriber()
+          notifySubscriberConnectionChanges(false)
+          notifyConnectionChanges(ConnectionState.WAITING)
+        }
+      })
+
+      it.setVideoListener(object : SubscriberKit.VideoListener {
+        override fun onVideoDataReceived(subscriberKit: SubscriberKit) {
+        }
+
+        override fun onVideoDisabled(subscriberKit: SubscriberKit, reason: String) {
+          notifySubscriberVideoChanges(false)
+        }
+
+        override fun onVideoEnabled(subscriberKit: SubscriberKit, reason: String) {
+          notifySubscriberVideoChanges(true)
+        }
+
+        override fun onVideoDisableWarning(subscriberKit: SubscriberKit) {}
+
+        override fun onVideoDisableWarningLifted(subscriberKit: SubscriberKit) {}
+      })
+    }
+
+    currentSession.subscribe(subscriber)
+  }
+
   private val reconnectionListener: Session.ReconnectionListener = object : Session.ReconnectionListener {
     override fun onReconnecting(session: Session) {
       notifyConnectionChanges(ConnectionState.RECONNECTING)
@@ -341,12 +391,19 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
       session?.unsubscribe(subscriber)
       subscriber = null
     }
-    
-    videoPlatformView.subscriberContainer.removeAllViews()
+
+    runOnUiThread {
+      videoPlatformView.subscriberContainer.removeAllViews()
+    }
   }
   
   private fun runOnUiThread(callback: () -> Unit) {
     Handler(Looper.getMainLooper()).post(callback)
+  }
+
+  private fun stopForegroundService() {
+    isCallActive = false
+    context?.let { VonageCallForegroundService.stop(it) }
   }
   
   override fun onAttachedToActivity(binding: ActivityPluginBinding) {
@@ -354,11 +411,17 @@ class VonageVideoCallPlugin : FlutterPlugin, VonageVideoCallHostApi, ActivityAwa
     activityLifecycleCallbacks = object : Application.ActivityLifecycleCallbacks {
       override fun onActivityPaused(activity: Activity) {
         if (activity != currentActivity) return
+        // While an in-call foreground service is running, keep publishing when
+        // the app is backgrounded/locked (T32). Only pause outside an active call.
+        if (isCallActive) return
         publisherGlSurfaceView?.onPause()
         session?.onPause()
       }
       override fun onActivityResumed(activity: Activity) {
         if (activity != currentActivity) return
+        // Mirror onActivityPaused: during an active call we never paused, so
+        // there is nothing to resume.
+        if (isCallActive) return
         session?.onResume()
         publisherGlSurfaceView?.onResume()
       }

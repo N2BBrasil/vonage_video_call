@@ -27,6 +27,10 @@ class VonageVideoCall
     VonageVideoCallPlatformApi.setup(this);
   }
 
+  void dispose() {
+    VonageVideoCallPlatformApi.setup(null);
+  }
+
   @override
   void onSessionConnected(String connectionId) {
     onConnectedOnSession?.call(connectionId);

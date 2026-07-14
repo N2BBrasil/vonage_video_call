@@ -1,3 +1,10 @@
+## 1.5.0
+
+* Feat: Keep mic/camera alive while the app is backgrounded or the device is locked on Android 12+ via an ongoing-call foreground service, started when the session connects and stopped when the call ends (Android)
+* Fix: Reuse a single shared video container across platform-view mount/unmount cycles so live OpenTok surfaces are re-parented instead of destroyed, preventing the screen from blacking out mid-call (Android)
+* Fix: Tear down any existing session on re-entry and reset the remote-stream map so a fast retry never orphans a still-connecting session or inherits stale streams (iOS)
+* Feat: Add `dispose()` to tear down the platform API (Flutter)
+
 ## 1.4.3
 
 * Fix: Notify subscriber disconnection and transition to WAITING when remote stream is destroyed or subscriber disconnects (Android)

@@ -1,3 +1,8 @@
+## 1.5.1
+
+* Chore: Bump OpenTok Android SDK to 2.35.1 (WebRTC M145, fixes publisher video freeze on rapid background/foreground transitions). Requires compileSdk 37 (Android)
+* Chore: Bump VonageClientSDKVideo to 2.34.1 (fixes publisher stream loss after Adaptive Media Routing transition). Kept below 2.35.x, which requires iOS 17+ (iOS)
+
 ## 1.5.0
 
 * Feat: Keep mic/camera alive while the app is backgrounded or the device is locked on Android 12+ via an ongoing-call foreground service, started when the session connects and stopped when the call ends (Android)
